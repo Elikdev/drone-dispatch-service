@@ -223,7 +223,7 @@ Settings come from environment variables and are checked at startup. The app wil
 | `DB_LOCK_TIMEOUT_MS`        | `3000`        | How long a request waits for a drone another request is changing |
 | `IDEMPOTENCY_KEY_TTL_HOURS` | `24`          | How long a load `Idempotency-Key` is remembered                  |
 | `BATTERY_AUDIT_ENABLED`     | `true`        | Turns the battery audit job on or off                            |
-| `BATTERY_CHECK_INTERVAL_MS` | `60000`       | How often the battery audit runs                                 |
+| `BATTERY_CHECK_INTERVAL_MS` | `600000`      | How often the battery audit runs                                 |
 | `BATTERY_AUDIT_BATCH_SIZE`  | `1000`        | Drones written per insert during an audit run                    |
 
 ## Assumptions

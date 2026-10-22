@@ -111,7 +111,7 @@ export class EnvironmentVariables {
   @Type(() => Number)
   @IsInt()
   @Min(1000)
-  BATTERY_CHECK_INTERVAL_MS = 60000;
+  BATTERY_CHECK_INTERVAL_MS = 600000;
 
   @Type(() => Number)
   @IsInt()
