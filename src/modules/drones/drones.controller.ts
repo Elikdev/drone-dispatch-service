@@ -21,6 +21,7 @@ import { DronesService } from './drones.service';
 import { ListDronesQueryDto } from './dto/list-drones-query.dto';
 import { LoadDroneDto } from './dto/load-drone.dto';
 import { RegisterDroneDto } from './dto/register-drone.dto';
+import { RetireDroneDto } from './dto/retire-drone.dto';
 import { TransitionDroneDto } from './dto/transition-drone.dto';
 import { LoadedMedicationsView } from './loaded-medications.mapper';
 import { LoadingService } from './loading.service';
@@ -85,6 +86,15 @@ export class DronesController {
     @Body() dto: TransitionDroneDto,
   ): Promise<DroneResponse> {
     return toDroneResponse(await this.drones.transition(id, dto.to));
+  }
+
+  @Post(':id/retire')
+  @HttpCode(HttpStatus.OK)
+  async retire(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RetireDroneDto,
+  ): Promise<DroneResponse> {
+    return toDroneResponse(await this.drones.retire(id, dto.reason));
   }
 
   @Post(':id/load')

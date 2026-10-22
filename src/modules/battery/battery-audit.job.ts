@@ -97,7 +97,7 @@ export class BatteryAuditJob implements OnModuleInit, OnModuleDestroy {
         INSERT INTO battery_audit_logs (drone_id, battery_pct, drone_state, is_low, checked_at)
         SELECT id, battery_pct, state, battery_pct < ${minBatteryPct}, ${checkedAt}
         FROM drones
-        WHERE id > ${lastId}::uuid
+        WHERE retired_at IS NULL AND id > ${lastId}::uuid
         ORDER BY id
         LIMIT ${batchSize}
         RETURNING drone_id, is_low`;

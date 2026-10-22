@@ -13,4 +13,9 @@ export class ListDronesQueryDto extends PaginationQueryDto {
   @Transform(toBoolean)
   @IsBoolean()
   available?: boolean;
+
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  includeRetired?: boolean;
 }

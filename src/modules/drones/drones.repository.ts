@@ -10,6 +10,7 @@ import { Drone, DroneState, Prisma } from '../../generated/prisma/client';
 export interface DroneFilter {
   state?: DroneState;
   availableWithBatteryPct?: number;
+  includeRetired?: boolean;
 }
 
 @Injectable()
@@ -41,6 +42,13 @@ export class DronesRepository {
     return drone;
   }
 
+  retire(db: Db, id: string, reason: string | undefined): Promise<Drone> {
+    return db.drone.update({
+      where: { id },
+      data: { retiredAt: new Date(), retiredReason: reason },
+    });
+  }
+
   async findById(id: string): Promise<Drone> {
     const drone = await this.prisma.drone.findUnique({ where: { id } });
     if (!drone) {
@@ -49,8 +57,8 @@ export class DronesRepository {
     return drone;
   }
 
-  count(db: Db): Promise<number> {
-    return db.drone.count();
+  countInService(db: Db): Promise<number> {
+    return db.drone.count({ where: { retiredAt: null } });
   }
 
   create(db: Db, data: Prisma.DroneCreateInput): Promise<Drone> {
@@ -76,6 +84,13 @@ export class DronesRepository {
 
   private toWhere(filter: DroneFilter): Prisma.DroneWhereInput {
     const where: Prisma.DroneWhereInput = { state: filter.state };
+
+    if (
+      !filter.includeRetired ||
+      filter.availableWithBatteryPct !== undefined
+    ) {
+      where.retiredAt = null;
+    }
 
     if (filter.availableWithBatteryPct !== undefined) {
       where.batteryPct = { gte: filter.availableWithBatteryPct };

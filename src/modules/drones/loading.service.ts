@@ -7,7 +7,10 @@ import { EnvironmentVariables } from '../../config/env.validation';
 import { Db } from '../../database/database.types';
 import { PrismaService } from '../../database/prisma.service';
 import { Medication } from '../../generated/prisma/client';
-import { assertEnoughBatteryToLoad } from './domain/drone-state';
+import {
+  assertEnoughBatteryToLoad,
+  assertInService,
+} from './domain/drone-state';
 import {
   assertFits,
   assertLoadable,
@@ -60,6 +63,7 @@ export class LoadingService {
         droneId,
         this.config.get('DB_LOCK_TIMEOUT_MS', { infer: true }),
       );
+      assertInService(drone);
       assertLoadable(drone);
       assertEnoughBatteryToLoad(
         drone.batteryPct,
