@@ -21,6 +21,7 @@ describe('validateEnv', () => {
       PAGINATION_DEFAULT_LIMIT: 20,
       PAGINATION_MAX_LIMIT: 100,
       DB_LOCK_TIMEOUT_MS: 3000,
+      IDEMPOTENCY_KEY_TTL_HOURS: 24,
     });
   });
 

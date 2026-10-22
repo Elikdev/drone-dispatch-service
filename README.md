@@ -39,17 +39,22 @@ npm run start:dev
 
 All endpoints are under `/api/v1` and need the `x-api-key` header. Weights are in grams.
 
-| Brief asks for                     | Endpoint                     |
-| ---------------------------------- | ---------------------------- |
-| Register a drone                   | `POST /drones`               |
-| Check available drones for loading | `GET /drones?available=true` |
+| Brief asks for                      | Endpoint                      |
+| ----------------------------------- | ----------------------------- |
+| Register a drone                    | `POST /drones`                |
+| Check available drones for loading  | `GET /drones?available=true`  |
+| Load a drone with medication        | `POST /drones/:id/load`       |
+| Check loaded medication for a drone | `GET /drones/:id/medications` |
 
-| Method | Path                      | What it does                                                |
-| ------ | ------------------------- | ----------------------------------------------------------- |
-| POST   | `/drones`                 | Register a drone. It starts IDLE and empty                  |
-| GET    | `/drones`                 | List drones. Filters: `available`, `state`, `page`, `limit` |
-| GET    | `/drones/:id`             | Get one drone                                               |
-| POST   | `/drones/:id/transitions` | Move a drone to its next state, e.g. `{ "to": "LOADED" }`   |
+| Method | Path                      | What it does                                                                  |
+| ------ | ------------------------- | ----------------------------------------------------------------------------- |
+| POST   | `/drones`                 | Register a drone. It starts IDLE and empty                                    |
+| GET    | `/drones`                 | List drones. Filters: `available`, `state`, `page`, `limit`                   |
+| GET    | `/drones/:id`             | Get one drone                                                                 |
+| POST   | `/drones/:id/transitions` | Move a drone to its next state, e.g. `{ "to": "LOADED" }`                     |
+| POST   | `/drones/:id/load`        | Load medications, e.g. `{ "items": [{ "code": "PARA_500", "quantity": 2 }] }` |
+| GET    | `/drones/:id/medications` | Medications on the drone's current delivery                                   |
+| GET    | `/medications`            | Medication catalogue. Filters: `page`, `limit`                                |
 
 Example:
 
@@ -59,6 +64,12 @@ curl -X POST http://localhost:3000/api/v1/drones \
   -H 'content-type: application/json' \
   -d '{"serialNumber":"DRN-NEW-001","model":"Middleweight","weightLimitG":300,"batteryPct":90}'
 ```
+
+### Loading
+
+Each load runs in one database transaction that locks the drone's row, so two loads on the same drone wait for each other and can never go over the weight limit together. Loads on other drones are not affected.
+
+Send an `Idempotency-Key` header to make a load safe to retry. The same key with the same body returns the first response (with `idempotent-replayed: true`) and loads nothing new. The same key with a different body is rejected. Keys expire after `IDEMPOTENCY_KEY_TTL_HOURS`.
 
 A drone can be loaded when its battery is at least `MIN_LOADING_BATTERY_PCT` and it is IDLE, or LOADING with space left.
 
@@ -71,7 +82,7 @@ LOADING -> IDLE (cancel)
 
 Going back to IDLE closes the delivery and empties the drone. Moving to LOADING or LOADED needs enough battery, and LOADED needs something on board.
 
-Error codes used here: `VALIDATION_ERROR`, `DRONE_NOT_FOUND`, `DUPLICATE_SERIAL`, `FLEET_FULL`, `INVALID_STATE_TRANSITION`, `BATTERY_TOO_LOW`, `DRONE_BUSY` (another request is changing the same drone; try again).
+Error codes: `VALIDATION_ERROR`, `DRONE_NOT_FOUND`, `MEDICATION_NOT_FOUND`, `DUPLICATE_SERIAL`, `FLEET_FULL`, `INVALID_STATE_TRANSITION`, `DRONE_NOT_LOADABLE`, `BATTERY_TOO_LOW`, `DRONE_OVERWEIGHT`, `IDEMPOTENCY_KEY_REUSED`, `DRONE_BUSY` (another request is changing the same drone; try again).
 
 ## Seed data
 
@@ -150,21 +161,22 @@ Every response has an `x-request-id` header. Send your own `x-request-id` to tra
 
 Settings come from environment variables and are checked at startup. The app will not start if any value is missing or wrong.
 
-| Variable                   | Default       | Description                                                      |
-| -------------------------- | ------------- | ---------------------------------------------------------------- |
-| `NODE_ENV`                 | `development` | `development`, `test` or `production`                            |
-| `PORT`                     | `3000`        | HTTP port                                                        |
-| `LOG_LEVEL`                | `info`        | `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent`   |
-| `DATABASE_URL`             | required      | PostgreSQL connection string                                     |
-| `API_KEY`                  | required      | Key clients send in `x-api-key`, at least 16 characters          |
-| `RATE_LIMIT_TTL_MS`        | `60000`       | Rate limit window in milliseconds                                |
-| `RATE_LIMIT_MAX`           | `100`         | Requests allowed per client in each window                       |
-| `FLEET_CAPACITY`           | `10`          | Most drones the fleet can have                                   |
-| `MAX_DRONE_WEIGHT_LIMIT_G` | `500`         | Highest weight limit a drone can be registered with              |
-| `MIN_LOADING_BATTERY_PCT`  | `25`          | Battery needed to load a drone                                   |
-| `PAGINATION_DEFAULT_LIMIT` | `20`          | Page size when none is sent                                      |
-| `PAGINATION_MAX_LIMIT`     | `100`         | Largest page size. A bigger `limit` is lowered to this           |
-| `DB_LOCK_TIMEOUT_MS`       | `3000`        | How long a request waits for a drone another request is changing |
+| Variable                    | Default       | Description                                                      |
+| --------------------------- | ------------- | ---------------------------------------------------------------- |
+| `NODE_ENV`                  | `development` | `development`, `test` or `production`                            |
+| `PORT`                      | `3000`        | HTTP port                                                        |
+| `LOG_LEVEL`                 | `info`        | `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent`   |
+| `DATABASE_URL`              | required      | PostgreSQL connection string                                     |
+| `API_KEY`                   | required      | Key clients send in `x-api-key`, at least 16 characters          |
+| `RATE_LIMIT_TTL_MS`         | `60000`       | Rate limit window in milliseconds                                |
+| `RATE_LIMIT_MAX`            | `100`         | Requests allowed per client in each window                       |
+| `FLEET_CAPACITY`            | `10`          | Most drones the fleet can have                                   |
+| `MAX_DRONE_WEIGHT_LIMIT_G`  | `500`         | Highest weight limit a drone can be registered with              |
+| `MIN_LOADING_BATTERY_PCT`   | `25`          | Battery needed to load a drone                                   |
+| `PAGINATION_DEFAULT_LIMIT`  | `20`          | Page size when none is sent                                      |
+| `PAGINATION_MAX_LIMIT`      | `100`         | Largest page size. A bigger `limit` is lowered to this           |
+| `DB_LOCK_TIMEOUT_MS`        | `3000`        | How long a request waits for a drone another request is changing |
+| `IDEMPOTENCY_KEY_TTL_HOURS` | `24`          | How long a load `Idempotency-Key` is remembered                  |
 
 ## Notes
 

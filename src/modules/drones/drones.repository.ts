@@ -3,6 +3,7 @@ import { AppError } from '../../common/errors/app-error';
 import { ErrorCode } from '../../common/errors/error-codes';
 import { PageRequest } from '../../common/pagination/paginate';
 import { Db } from '../../database/database.types';
+import { isLockTimeout } from '../../database/prisma-errors';
 import { PrismaService } from '../../database/prisma.service';
 import { Drone, DroneState, Prisma } from '../../generated/prisma/client';
 
@@ -21,7 +22,18 @@ export class DronesRepository {
 
   async lockById(db: Db, id: string, lockTimeoutMs: number): Promise<Drone> {
     await db.$executeRaw`SELECT set_config('lock_timeout', ${`${lockTimeoutMs}ms`}, true)`;
-    await db.$executeRaw`SELECT 1 FROM drones WHERE id = ${id}::uuid FOR UPDATE`;
+    try {
+      await db.$executeRaw`SELECT 1 FROM drones WHERE id = ${id}::uuid FOR UPDATE`;
+    } catch (error) {
+      if (isLockTimeout(error)) {
+        throw new AppError(
+          ErrorCode.DRONE_BUSY,
+          'The drone is being updated by another request, try again',
+          HttpStatus.CONFLICT,
+        );
+      }
+      throw error;
+    }
     const drone = await db.drone.findUnique({ where: { id } });
     if (!drone) {
       throw droneNotFound(id);

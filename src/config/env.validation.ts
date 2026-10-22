@@ -95,6 +95,11 @@ export class EnvironmentVariables {
   @Min(100)
   @Max(30000)
   DB_LOCK_TIMEOUT_MS = 3000;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  IDEMPOTENCY_KEY_TTL_HOURS = 24;
 }
 
 export function validateEnv(

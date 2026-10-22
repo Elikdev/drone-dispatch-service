@@ -9,6 +9,7 @@ import { buildLoggerOptions } from './config/logger.config';
 import { PrismaModule } from './database/prisma.module';
 import { DronesModule } from './modules/drones/drones.module';
 import { HealthModule } from './modules/health/health.module';
+import { MedicationsModule } from './modules/medications/medications.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { HealthModule } from './modules/health/health.module';
     PrismaModule,
     HealthModule,
     DronesModule,
+    MedicationsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

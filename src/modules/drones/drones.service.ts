@@ -6,7 +6,7 @@ import { Pagination, resolvePage } from '../../common/pagination/paginate';
 import { gramsToMg } from '../../common/units/weight';
 import { EnvironmentVariables } from '../../config/env.validation';
 import { Db } from '../../database/database.types';
-import { isLockTimeout, isUniqueViolation } from '../../database/prisma-errors';
+import { isUniqueViolation } from '../../database/prisma-errors';
 import { PrismaService } from '../../database/prisma.service';
 import { Drone, DroneState } from '../../generated/prisma/client';
 import { assertCanTransition } from './domain/drone-state';
@@ -122,26 +122,15 @@ export class DronesService {
     });
   }
 
-  async inDroneLock<T>(
+  private inDroneLock<T>(
     id: string,
     work: (tx: Db, drone: Drone) => Promise<T>,
   ): Promise<T> {
     const lockTimeoutMs = this.config.get('DB_LOCK_TIMEOUT_MS', {
       infer: true,
     });
-    try {
-      return await this.prisma.$transaction(async (tx) =>
-        work(tx, await this.drones.lockById(tx, id, lockTimeoutMs)),
-      );
-    } catch (error) {
-      if (isLockTimeout(error)) {
-        throw new AppError(
-          ErrorCode.DRONE_BUSY,
-          'The drone is being updated by another request, try again',
-          HttpStatus.CONFLICT,
-        );
-      }
-      throw error;
-    }
+    return this.prisma.$transaction(async (tx) =>
+      work(tx, await this.drones.lockById(tx, id, lockTimeoutMs)),
+    );
   }
 }
