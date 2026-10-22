@@ -47,7 +47,9 @@ describe('assertCanTransition', () => {
 
       expect(() =>
         assertCanTransition(drone(from, 24), to, MIN_BATTERY),
-      ).toThrow(expect.objectContaining({ code: 'BUSINESS_RULE' }) as Error);
+      ).toThrow(
+        expect.objectContaining({ code: 'UNPROCESSABLE_ENTITY' }) as Error,
+      );
       expect(() =>
         assertCanTransition(drone(from, 25), to, MIN_BATTERY),
       ).not.toThrow();
@@ -119,7 +121,7 @@ describe('assertFits', () => {
   it('rejects a load 1 mg over the limit with the numbers in grams', () => {
     expect(() => assertFits(drone, 200_001)).toThrow(
       expect.objectContaining({
-        code: 'BUSINESS_RULE',
+        code: 'UNPROCESSABLE_ENTITY',
         details: { currentG: 300, requestedG: 200.001, limitG: 500 },
       }) as Error,
     );

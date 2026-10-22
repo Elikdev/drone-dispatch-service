@@ -107,7 +107,7 @@ describe('Drone transitions (e2e)', () => {
 
     const res = await transition('LOADING', lowDrone.id).expect(422);
 
-    expect(res.body.error.code).toBe('BUSINESS_RULE');
+    expect(res.body.error.code).toBe('UNPROCESSABLE_ENTITY');
   });
 
   it.each([['FLYING'], [undefined]])(

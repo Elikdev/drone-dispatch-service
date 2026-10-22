@@ -29,7 +29,7 @@ export function assertEnoughBatteryToLoad(
 ): void {
   if (batteryPct < minBatteryPct) {
     throw new AppError(
-      ErrorCode.BUSINESS_RULE,
+      ErrorCode.UNPROCESSABLE_ENTITY,
       `Battery is at ${batteryPct}%, loading needs at least ${minBatteryPct}%`,
       HttpStatus.UNPROCESSABLE_ENTITY,
       { batteryPct, minBatteryPct },
@@ -113,7 +113,7 @@ export function assertFits(
 ): void {
   if (drone.loadedWeightMg + addedWeightMg > drone.weightLimitMg) {
     throw new AppError(
-      ErrorCode.BUSINESS_RULE,
+      ErrorCode.UNPROCESSABLE_ENTITY,
       `Adding ${mgToGrams(addedWeightMg)}g would exceed the ${mgToGrams(drone.weightLimitMg)}g limit`,
       HttpStatus.UNPROCESSABLE_ENTITY,
       {

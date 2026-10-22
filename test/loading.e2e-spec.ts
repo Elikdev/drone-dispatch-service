@@ -110,7 +110,7 @@ describe('Loading (e2e)', () => {
     const res = await load(id, [{ code: 'ACT_20', quantity: 1 }]).expect(422);
 
     expect(res.body.error).toMatchObject({
-      code: 'BUSINESS_RULE',
+      code: 'UNPROCESSABLE_ENTITY',
       details: { currentG: 150, requestedG: 15, limitG: 150 },
     });
   });
@@ -136,7 +136,7 @@ describe('Loading (e2e)', () => {
     ]).expect(422);
 
     expect(res.body.error).toMatchObject({
-      code: 'BUSINESS_RULE',
+      code: 'UNPROCESSABLE_ENTITY',
       details: { batteryPct: 20, minBatteryPct: 25 },
     });
   });
