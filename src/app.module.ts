@@ -6,6 +6,8 @@ import { LoggerModule } from 'nestjs-pino';
 import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { EnvironmentVariables, validateEnv } from './config/env.validation';
 import { buildLoggerOptions } from './config/logger.config';
+import { PrismaModule } from './database/prisma.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { buildLoggerOptions } from './config/logger.config';
         },
       ],
     }),
+    PrismaModule,
+    HealthModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

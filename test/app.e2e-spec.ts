@@ -1,14 +1,11 @@
 import { Body, Controller, Get, INestApplication, Post } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import { getOptionsToken } from '@nestjs/throttler';
 import { IsInt, IsString, Min } from 'class-validator';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
-import { configureApp } from '../src/app.setup';
 import { Public } from '../src/common/decorators/public.decorator';
+import { createTestApp, TEST_API_KEY as API_KEY } from './create-test-app';
 
-const API_KEY = process.env.API_KEY as string;
 const RATE_LIMIT = 5;
 
 class ProbeDto {
@@ -43,17 +40,13 @@ describe('App (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
+    app = await createTestApp({
       controllers: [ProbeController],
-    })
-      .overrideProvider(getOptionsToken())
-      .useValue([{ ttl: 60000, limit: RATE_LIMIT }])
-      .compile();
-
-    app = moduleRef.createNestApplication();
-    configureApp(app);
-    await app.init();
+      configure: (builder) =>
+        builder
+          .overrideProvider(getOptionsToken())
+          .useValue([{ ttl: 60000, limit: RATE_LIMIT }]),
+    });
   });
 
   afterEach(async () => {

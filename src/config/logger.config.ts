@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { IncomingMessage, ServerResponse } from 'node:http';
+import { RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Params } from 'nestjs-pino';
 import { EnvironmentVariables, NodeEnv } from './env.validation';
@@ -30,6 +31,7 @@ export function buildLoggerOptions(
     config.get('NODE_ENV', { infer: true }) === NodeEnv.Development;
 
   return {
+    forRoutes: [{ path: '{*splat}', method: RequestMethod.ALL }],
     pinoHttp: {
       level: config.get('LOG_LEVEL', { infer: true }),
       genReqId: resolveRequestId,
