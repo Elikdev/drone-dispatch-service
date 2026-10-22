@@ -7,6 +7,7 @@ import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { EnvironmentVariables, validateEnv } from './config/env.validation';
 import { buildLoggerOptions } from './config/logger.config';
 import { PrismaModule } from './database/prisma.module';
+import { DronesModule } from './modules/drones/drones.module';
 import { HealthModule } from './modules/health/health.module';
 
 @Module({
@@ -31,6 +32,7 @@ import { HealthModule } from './modules/health/health.module';
     }),
     PrismaModule,
     HealthModule,
+    DronesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
