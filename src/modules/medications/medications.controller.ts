@@ -1,8 +1,7 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Pagination } from '../../common/pagination/paginate';
-import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
-import { CreateMedicationDto } from './dto/create-medication.dto';
+import { Pagination, PaginationQueryDto } from '../../common/pagination';
+import { CreateMedicationDto } from './medications.dto';
 import { MedicationResponse, toMedicationResponse } from './medication.mapper';
 import { MedicationsService } from './medications.service';
 

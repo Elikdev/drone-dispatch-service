@@ -1,28 +1,23 @@
 import { createHash } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AppError } from '../../common/errors/app-error';
-import { ErrorCode } from '../../common/errors/error-codes';
+import { AppError, ErrorCode } from '../../common/app-error';
 import { EnvironmentVariables } from '../../config/env.validation';
-import { Db } from '../../database/database.types';
-import { PrismaService } from '../../database/prisma.service';
+import { Db, PrismaService } from '../../database/prisma.service';
 import { DroneState, Medication } from '../../generated/prisma/client';
 import {
   assertEnoughBatteryToLoad,
-  assertInService,
-} from './domain/drone-state';
-import {
   assertFits,
+  assertInService,
   assertLoadable,
   LoadLine,
   mergeLoadLines,
-} from './domain/load-rules';
+} from './drones.rules';
 import { DronesRepository } from './drones.repository';
 import {
   LoadedMedicationsView,
   toLoadedMedicationsView,
-} from './loaded-medications.mapper';
-import { LoadingRepository } from './loading.repository';
+} from './drones.mapper';
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -36,7 +31,6 @@ export class LoadingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly drones: DronesRepository,
-    private readonly loading: LoadingRepository,
     private readonly config: ConfigService<EnvironmentVariables, true>,
   ) {}
 
@@ -82,8 +76,8 @@ export class LoadingService {
       );
       assertFits(drone, addedWeightMg);
 
-      const delivery = await this.loading.findOrCreateOpenDelivery(tx, droneId);
-      await this.loading.addItems(
+      const delivery = await this.drones.findOrCreateOpenDelivery(tx, droneId);
+      await this.drones.addItems(
         tx,
         items.map(({ line, medication }) => ({
           deliveryId: delivery.id,
@@ -102,10 +96,10 @@ export class LoadingService {
 
       const view = toLoadedMedicationsView(
         updated,
-        await this.loading.findOpenItems(tx, droneId),
+        await this.drones.findOpenItems(tx, droneId),
       );
       if (idempotencyKey) {
-        await this.loading.saveResponse(tx, idempotencyKey, view);
+        await this.drones.saveResponse(tx, idempotencyKey, view);
       }
       return { view, replayed: false };
     });
@@ -115,7 +109,7 @@ export class LoadingService {
     const drone = await this.drones.findById(droneId);
     return toLoadedMedicationsView(
       drone,
-      await this.loading.findOpenItems(this.prisma, droneId),
+      await this.drones.findOpenItems(this.prisma, droneId),
     );
   }
 
@@ -123,7 +117,7 @@ export class LoadingService {
     db: Db,
     lines: LoadLine[],
   ): Promise<Medication[]> {
-    const found = await this.loading.findMedicationsByCodes(
+    const found = await this.drones.findMedicationsByCodes(
       db,
       lines.map((line) => line.code),
     );
@@ -135,7 +129,7 @@ export class LoadingService {
     if (missing.length > 0) {
       const codes = missing.map((line) => line.code);
       throw new AppError(
-        ErrorCode.MEDICATION_NOT_FOUND,
+        ErrorCode.NOT_FOUND,
         `Unknown medication codes: ${codes.join(', ')}`,
         HttpStatus.NOT_FOUND,
         { codes },
@@ -149,21 +143,21 @@ export class LoadingService {
     key: string,
     requestHash: string,
   ): Promise<LoadedMedicationsView | null> {
-    if (await this.loading.insertKeyIfNew(db, key, requestHash)) {
+    if (await this.drones.insertKeyIfNew(db, key, requestHash)) {
       return null;
     }
 
-    const existing = await this.loading.findKey(db, key);
+    const existing = await this.drones.findKey(db, key);
     const ttlMs =
       this.config.get('IDEMPOTENCY_KEY_TTL_HOURS', { infer: true }) * HOUR_MS;
 
     if (!existing || existing.createdAt.getTime() < Date.now() - ttlMs) {
-      await this.loading.restartKey(db, key, requestHash);
+      await this.drones.restartKey(db, key, requestHash);
       return null;
     }
     if (existing.requestHash !== requestHash || !existing.responseBody) {
       throw new AppError(
-        ErrorCode.IDEMPOTENCY_KEY_REUSED,
+        ErrorCode.CONFLICT,
         'This Idempotency-Key was already used for a different request',
         HttpStatus.CONFLICT,
       );

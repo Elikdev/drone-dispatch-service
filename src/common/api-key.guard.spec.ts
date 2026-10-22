@@ -1,9 +1,9 @@
 import { ExecutionContext } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
-import { EnvironmentVariables } from '../../config/env.validation';
-import { AppError } from '../errors/app-error';
+import { EnvironmentVariables } from '../config/env.validation';
 import { ApiKeyGuard } from './api-key.guard';
+import { AppError } from './app-error';
 
 const API_KEY = 'correct-api-key-123';
 

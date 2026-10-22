@@ -1,5 +1,5 @@
 import { ValidationError } from 'class-validator';
-import { formatValidationErrors } from './format-validation-errors';
+import { formatValidationErrors } from './validation';
 
 describe('formatValidationErrors', () => {
   it('returns one entry per field with its messages', () => {

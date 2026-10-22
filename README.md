@@ -90,12 +90,12 @@ Send an `Idempotency-Key` header to make a load safe to retry. The same key with
 Drones are never deleted, because their deliveries and battery history must stay. `POST /drones/:id/retire` takes an IDLE drone out of service instead. A retired drone:
 
 - is hidden from `GET /drones` (add `includeRetired=true` to see it) and never shows as available
-- cannot be loaded, moved to another state or have its battery updated (`DRONE_RETIRED`)
+- cannot be loaded, moved to another state or have its battery updated (409 `CONFLICT`)
 - does not count towards `FLEET_CAPACITY`, so a replacement can be registered
 - is skipped by the battery audit
 - keeps its serial number, details and history readable
 
-Retiring twice returns the drone unchanged. A drone that is not IDLE gets `DRONE_IN_USE`. Not built yet: bringing a drone back into service, and recording who retired it (needs user accounts).
+Retiring twice returns the drone unchanged. A drone that is not IDLE gets 409 `CONFLICT`. Not built yet: bringing a drone back into service, and recording who retired it (needs user accounts).
 
 ### Battery audit
 
@@ -114,7 +114,18 @@ LOADING -> IDLE (cancel)
 
 Going back to IDLE closes the delivery and empties the drone. Moving to LOADING or LOADED needs enough battery, and LOADED needs something on board.
 
-Error codes: `VALIDATION_ERROR`, `DRONE_NOT_FOUND`, `MEDICATION_NOT_FOUND`, `DUPLICATE_SERIAL`, `DUPLICATE_MEDICATION_CODE`, `FLEET_FULL`, `INVALID_STATE_TRANSITION`, `DRONE_NOT_LOADABLE`, `BATTERY_TOO_LOW`, `DRONE_OVERWEIGHT`, `IDEMPOTENCY_KEY_REUSED`, `DRONE_IN_USE`, `DRONE_RETIRED`, `DRONE_BUSY` (another request is changing the same drone; try again).
+Errors use 8 codes. The `message` says exactly what went wrong, and `details` carries the numbers where they help (for example the current, requested and limit weight when a load is too heavy).
+
+| Code                  | Status   | When                                                                                                                                                                                                                                             |
+| --------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VALIDATION_ERROR`    | 400, 413 | Bad fields, broken JSON, a bad id, or a body that is too large                                                                                                                                                                                   |
+| `UNAUTHORIZED`        | 401      | Missing or wrong API key                                                                                                                                                                                                                         |
+| `NOT_FOUND`           | 404      | Unknown drone, unknown medication codes, or unknown route                                                                                                                                                                                        |
+| `CONFLICT`            | 409      | Duplicate serial or code, fleet full, a state change that isn't allowed, a drone that isn't free to load or retire, a retired drone, an `Idempotency-Key` reused for a different request, or another request changing the same drone (try again) |
+| `BUSINESS_RULE`       | 422      | Over the weight limit, or battery too low to load                                                                                                                                                                                                |
+| `RATE_LIMITED`        | 429      | Too many requests                                                                                                                                                                                                                                |
+| `SERVICE_UNAVAILABLE` | 503      | Database is down                                                                                                                                                                                                                                 |
+| `INTERNAL_ERROR`      | 500      | Anything unexpected                                                                                                                                                                                                                              |
 
 ## Seed data
 

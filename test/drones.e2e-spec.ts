@@ -96,7 +96,7 @@ describe('Drones (e2e)', () => {
         .post('/drones', { ...validDrone, serialNumber: 'DRN-LW-001' })
         .expect(409);
 
-      expect(res.body.error).toMatchObject({ code: 'DUPLICATE_SERIAL' });
+      expect(res.body.error).toMatchObject({ code: 'CONFLICT' });
     });
 
     it('rejects a new drone when the fleet is full', async () => {
@@ -109,7 +109,7 @@ describe('Drones (e2e)', () => {
         .post('/drones', { ...validDrone, serialNumber: 'DRN-NEW-003' })
         .expect(409);
 
-      expect(res.body.error).toMatchObject({ code: 'FLEET_FULL' });
+      expect(res.body.error).toMatchObject({ code: 'CONFLICT' });
     });
 
     it('lets only one of two parallel registrations take the last slot', async () => {
@@ -231,7 +231,7 @@ describe('Drones (e2e)', () => {
         .get('/drones/0199f6d2-0000-7000-8000-000000000000')
         .expect(404);
 
-      expect(res.body.error.code).toBe('DRONE_NOT_FOUND');
+      expect(res.body.error.code).toBe('NOT_FOUND');
     });
 
     it('returns 400 for an id that is not a uuid', async () => {

@@ -13,17 +13,21 @@ import {
 } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
-import { AppError } from '../../common/errors/app-error';
-import { ErrorCode } from '../../common/errors/error-codes';
-import { Pagination } from '../../common/pagination/paginate';
-import { DroneResponse, toDroneResponse } from './drone.mapper';
+import { AppError, ErrorCode } from '../../common/app-error';
+import { Pagination } from '../../common/pagination';
+import {
+  DroneResponse,
+  LoadedMedicationsView,
+  toDroneResponse,
+} from './drones.mapper';
 import { DronesService } from './drones.service';
-import { ListDronesQueryDto } from './dto/list-drones-query.dto';
-import { LoadDroneDto } from './dto/load-drone.dto';
-import { RegisterDroneDto } from './dto/register-drone.dto';
-import { RetireDroneDto } from './dto/retire-drone.dto';
-import { TransitionDroneDto } from './dto/transition-drone.dto';
-import { LoadedMedicationsView } from './loaded-medications.mapper';
+import {
+  ListDronesQueryDto,
+  LoadDroneDto,
+  RegisterDroneDto,
+  RetireDroneDto,
+  TransitionDroneDto,
+} from './drones.dto';
 import { LoadingService } from './loading.service';
 
 const IDEMPOTENCY_KEY_HEADER = 'idempotency-key';

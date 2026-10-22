@@ -1,8 +1,7 @@
 import { Controller, Get, HttpStatus } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
-import { Public } from '../../common/decorators/public.decorator';
-import { AppError } from '../../common/errors/app-error';
-import { ErrorCode } from '../../common/errors/error-codes';
+import { Public } from '../../common/api-key.guard';
+import { AppError, ErrorCode } from '../../common/app-error';
 import { PrismaService } from '../../database/prisma.service';
 
 @Public()

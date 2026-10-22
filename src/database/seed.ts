@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { Logger } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { gramsToMg } from '../common/units/weight';
+import { gramsToMg } from '../common/weight';
 import { PrismaClient } from '../generated/prisma/client';
 import { DRONE_SEEDS, MEDICATION_SEEDS } from './seed-data';
 

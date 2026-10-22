@@ -1,9 +1,9 @@
-import { gramsToMg } from '../common/units/weight';
-import { DRONE_MODELS } from '../modules/drones/domain/drone.rules';
+import { gramsToMg } from '../common/weight';
+import { DRONE_MODELS } from '../modules/drones/drones.rules';
 import {
   MEDICATION_CODE_PATTERN,
   MEDICATION_NAME_PATTERN,
-} from '../modules/medications/domain/medication.rules';
+} from '../modules/medications/medications.dto';
 import { DRONE_SEEDS, MEDICATION_SEEDS } from './seed-data';
 
 const MAX_WEIGHT_LIMIT_G = 500;

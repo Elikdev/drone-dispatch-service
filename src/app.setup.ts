@@ -1,12 +1,11 @@
 import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
-import { AppError } from './common/errors/app-error';
-import { AllExceptionsFilter } from './common/errors/all-exceptions.filter';
-import { ErrorCode } from './common/errors/error-codes';
-import { formatValidationErrors } from './common/errors/format-validation-errors';
-import { API_KEY_HEADER } from './common/guards/api-key.guard';
-import { ResponseInterceptor } from './common/responses/response.interceptor';
+import { AppError, ErrorCode } from './common/app-error';
+import { AllExceptionsFilter } from './common/all-exceptions.filter';
+import { formatValidationErrors } from './common/validation';
+import { API_KEY_HEADER } from './common/api-key.guard';
+import { ResponseInterceptor } from './common/response.interceptor';
 
 export const API_PREFIX = 'api/v1';
 

@@ -87,7 +87,7 @@ describe('Drone transitions (e2e)', () => {
     const res = await transition('DELIVERING').expect(409);
 
     expect(res.body.error).toMatchObject({
-      code: 'INVALID_STATE_TRANSITION',
+      code: 'CONFLICT',
       details: { from: 'IDLE', to: 'DELIVERING', allowed: ['LOADING'] },
     });
   });
@@ -97,7 +97,7 @@ describe('Drone transitions (e2e)', () => {
 
     const res = await transition('LOADED').expect(409);
 
-    expect(res.body.error.code).toBe('INVALID_STATE_TRANSITION');
+    expect(res.body.error.code).toBe('CONFLICT');
   });
 
   it('rejects LOADING when the battery is too low', async () => {
@@ -107,7 +107,7 @@ describe('Drone transitions (e2e)', () => {
 
     const res = await transition('LOADING', lowDrone.id).expect(422);
 
-    expect(res.body.error.code).toBe('BATTERY_TOO_LOW');
+    expect(res.body.error.code).toBe('BUSINESS_RULE');
   });
 
   it.each([['FLYING'], [undefined]])(
@@ -125,10 +125,10 @@ describe('Drone transitions (e2e)', () => {
       '0199f6d2-0000-7000-8000-000000000000',
     ).expect(404);
 
-    expect(res.body.error.code).toBe('DRONE_NOT_FOUND');
+    expect(res.body.error.code).toBe('NOT_FOUND');
   });
 
-  it('answers DRONE_BUSY when another request holds the drone too long', async () => {
+  it('answers 409 busy when another request holds the drone too long', async () => {
     let release: () => void = () => undefined;
     const held = new Promise<void>((resolve) => (release = resolve));
     let locked: () => void = () => undefined;
@@ -149,6 +149,6 @@ describe('Drone transitions (e2e)', () => {
     await holder;
 
     expect(res.status).toBe(409);
-    expect(res.body.error.code).toBe('DRONE_BUSY');
+    expect(res.body.error.code).toBe('CONFLICT');
   });
 });

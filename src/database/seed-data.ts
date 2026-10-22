@@ -1,4 +1,4 @@
-import { DroneModel } from '../modules/drones/domain/drone.rules';
+import { DroneModel } from '../modules/drones/drones.rules';
 
 export interface DroneSeed {
   serialNumber: string;

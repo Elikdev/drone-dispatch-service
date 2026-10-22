@@ -110,7 +110,7 @@ describe('Loading (e2e)', () => {
     const res = await load(id, [{ code: 'ACT_20', quantity: 1 }]).expect(422);
 
     expect(res.body.error).toMatchObject({
-      code: 'DRONE_OVERWEIGHT',
+      code: 'BUSINESS_RULE',
       details: { currentG: 150, requestedG: 15, limitG: 150 },
     });
   });
@@ -136,7 +136,7 @@ describe('Loading (e2e)', () => {
     ]).expect(422);
 
     expect(res.body.error).toMatchObject({
-      code: 'BATTERY_TOO_LOW',
+      code: 'BUSINESS_RULE',
       details: { batteryPct: 20, minBatteryPct: 25 },
     });
   });
@@ -147,7 +147,7 @@ describe('Loading (e2e)', () => {
 
     const res = await load(id, [{ code: 'PARA_500', quantity: 1 }]).expect(409);
 
-    expect(res.body.error.code).toBe('DRONE_NOT_LOADABLE');
+    expect(res.body.error.code).toBe('CONFLICT');
   });
 
   it('lists every unknown medication code', async () => {
@@ -158,7 +158,7 @@ describe('Loading (e2e)', () => {
     ]).expect(404);
 
     expect(res.body.error).toMatchObject({
-      code: 'MEDICATION_NOT_FOUND',
+      code: 'NOT_FOUND',
       details: { codes: ['NOPE_1', 'NOPE_2'] },
     });
   });
@@ -234,7 +234,7 @@ describe('Loading (e2e)', () => {
         'reuse-1',
       ).expect(409);
 
-      expect(res.body.error.code).toBe('IDEMPOTENCY_KEY_REUSED');
+      expect(res.body.error.code).toBe('CONFLICT');
     });
 
     it('loads once when the same key arrives twice at the same time', async () => {
@@ -325,7 +325,7 @@ describe('Loading (e2e)', () => {
         404,
       );
 
-      expect(res.body.error.code).toBe('DRONE_NOT_FOUND');
+      expect(res.body.error.code).toBe('NOT_FOUND');
     });
   });
 

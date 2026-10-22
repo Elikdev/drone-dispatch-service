@@ -1,5 +1,5 @@
 import { plainToInstance, Transform, Type } from 'class-transformer';
-import { toBoolean } from '../common/validation/to-boolean';
+import { toBoolean } from '../common/validation';
 import {
   IsBoolean,
   IsEnum,

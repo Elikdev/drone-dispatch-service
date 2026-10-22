@@ -1,9 +1,12 @@
-import { DroneState } from '../../../generated/prisma/client';
+import { DroneState } from '../../generated/prisma/client';
 import {
   ALLOWED_TRANSITIONS,
   assertCanTransition,
+  assertFits,
   assertInService,
-} from './drone-state';
+  assertLoadable,
+  mergeLoadLines,
+} from './drones.rules';
 
 const MIN_BATTERY = 25;
 const STATES = Object.keys(ALLOWED_TRANSITIONS) as DroneState[];
@@ -31,7 +34,7 @@ describe('assertCanTransition', () => {
   it.each(illegalPairs)('rejects %s → %s', (from, to) => {
     expect(() => assertCanTransition(drone(from), to, MIN_BATTERY)).toThrow(
       expect.objectContaining({
-        code: 'INVALID_STATE_TRANSITION',
+        code: 'CONFLICT',
         details: { from, to, allowed: ALLOWED_TRANSITIONS[from] },
       }) as Error,
     );
@@ -44,7 +47,7 @@ describe('assertCanTransition', () => {
 
       expect(() =>
         assertCanTransition(drone(from, 24), to, MIN_BATTERY),
-      ).toThrow(expect.objectContaining({ code: 'BATTERY_TOO_LOW' }) as Error);
+      ).toThrow(expect.objectContaining({ code: 'BUSINESS_RULE' }) as Error);
       expect(() =>
         assertCanTransition(drone(from, 25), to, MIN_BATTERY),
       ).not.toThrow();
@@ -60,9 +63,7 @@ describe('assertCanTransition', () => {
   it('rejects LOADED when nothing is loaded', () => {
     expect(() =>
       assertCanTransition(drone('LOADING', 80, 0), 'LOADED', MIN_BATTERY),
-    ).toThrow(
-      expect.objectContaining({ code: 'INVALID_STATE_TRANSITION' }) as Error,
-    );
+    ).toThrow(expect.objectContaining({ code: 'CONFLICT' }) as Error);
   });
 });
 
@@ -73,7 +74,54 @@ describe('assertInService', () => {
 
   it('rejects a retired drone', () => {
     expect(() => assertInService({ id: 'd1', retiredAt: new Date() })).toThrow(
-      expect.objectContaining({ code: 'DRONE_RETIRED' }) as Error,
+      expect.objectContaining({ code: 'CONFLICT' }) as Error,
+    );
+  });
+});
+
+describe('mergeLoadLines', () => {
+  it('adds up repeated codes and sorts by code', () => {
+    expect(
+      mergeLoadLines([
+        { code: 'PARA_500', quantity: 2 },
+        { code: 'ACT_20', quantity: 1 },
+        { code: 'PARA_500', quantity: 3 },
+      ]),
+    ).toEqual([
+      { code: 'ACT_20', quantity: 1 },
+      { code: 'PARA_500', quantity: 5 },
+    ]);
+  });
+});
+
+describe('assertLoadable', () => {
+  it.each(['IDLE', 'LOADING'] as const)('allows %s', (state) => {
+    expect(() => assertLoadable({ state })).not.toThrow();
+  });
+
+  it.each(['LOADED', 'DELIVERING', 'DELIVERED', 'RETURNING'] as const)(
+    'rejects %s',
+    (state) => {
+      expect(() => assertLoadable({ state })).toThrow(
+        expect.objectContaining({ code: 'CONFLICT' }) as Error,
+      );
+    },
+  );
+});
+
+describe('assertFits', () => {
+  const drone = { loadedWeightMg: 300_000, weightLimitMg: 500_000 };
+
+  it('allows a load that ends exactly at the limit', () => {
+    expect(() => assertFits(drone, 200_000)).not.toThrow();
+  });
+
+  it('rejects a load 1 mg over the limit with the numbers in grams', () => {
+    expect(() => assertFits(drone, 200_001)).toThrow(
+      expect.objectContaining({
+        code: 'BUSINESS_RULE',
+        details: { currentG: 300, requestedG: 200.001, limitG: 500 },
+      }) as Error,
     );
   });
 });

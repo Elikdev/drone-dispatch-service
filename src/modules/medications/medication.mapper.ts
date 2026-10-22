@@ -1,4 +1,4 @@
-import { mgToGrams } from '../../common/units/weight';
+import { mgToGrams } from '../../common/weight';
 import { Medication } from '../../generated/prisma/client';
 
 export interface MedicationResponse {

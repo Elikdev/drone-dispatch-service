@@ -7,9 +7,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ApiErrorBody, ApiFailure } from '../responses/api-response';
-import { AppError } from './app-error';
-import { ErrorCode } from './error-codes';
+import { AppError, ErrorCode } from './app-error';
+import { ApiErrorBody, ApiFailure } from './response.interceptor';
 
 interface MappedError {
   status: number;
@@ -17,10 +16,10 @@ interface MappedError {
 }
 
 const CODE_BY_STATUS: Partial<Record<number, ErrorCode>> = {
-  [HttpStatus.BAD_REQUEST]: ErrorCode.BAD_REQUEST,
   [HttpStatus.UNAUTHORIZED]: ErrorCode.UNAUTHORIZED,
   [HttpStatus.NOT_FOUND]: ErrorCode.NOT_FOUND,
-  [HttpStatus.PAYLOAD_TOO_LARGE]: ErrorCode.PAYLOAD_TOO_LARGE,
+  [HttpStatus.CONFLICT]: ErrorCode.CONFLICT,
+  [HttpStatus.UNPROCESSABLE_ENTITY]: ErrorCode.BUSINESS_RULE,
   [HttpStatus.TOO_MANY_REQUESTS]: ErrorCode.RATE_LIMITED,
   [HttpStatus.SERVICE_UNAVAILABLE]: ErrorCode.SERVICE_UNAVAILABLE,
 };
@@ -76,7 +75,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const fallback =
-        status >= 500 ? ErrorCode.INTERNAL_ERROR : ErrorCode.REQUEST_ERROR;
+        status >= 500 ? ErrorCode.INTERNAL_ERROR : ErrorCode.VALIDATION_ERROR;
       return {
         status,
         body: {
@@ -90,7 +89,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return {
         status: HttpStatus.PAYLOAD_TOO_LARGE,
         body: {
-          code: ErrorCode.PAYLOAD_TOO_LARGE,
+          code: ErrorCode.VALIDATION_ERROR,
           message: 'Request body is too large',
         },
       };

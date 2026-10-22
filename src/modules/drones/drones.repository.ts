@@ -1,11 +1,20 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { AppError } from '../../common/errors/app-error';
-import { ErrorCode } from '../../common/errors/error-codes';
-import { PageRequest } from '../../common/pagination/paginate';
-import { Db } from '../../database/database.types';
-import { isLockTimeout } from '../../database/prisma-errors';
-import { PrismaService } from '../../database/prisma.service';
-import { Drone, DroneState, Prisma } from '../../generated/prisma/client';
+import { AppError, ErrorCode } from '../../common/app-error';
+import { PageRequest } from '../../common/pagination';
+import {
+  Db,
+  isLockTimeout,
+  PrismaService,
+} from '../../database/prisma.service';
+import {
+  Delivery,
+  DeliveryItem,
+  Drone,
+  DroneState,
+  IdempotencyKey,
+  Medication,
+  Prisma,
+} from '../../generated/prisma/client';
 
 export interface DroneFilter {
   state?: DroneState;
@@ -28,7 +37,7 @@ export class DronesRepository {
     } catch (error) {
       if (isLockTimeout(error)) {
         throw new AppError(
-          ErrorCode.DRONE_BUSY,
+          ErrorCode.CONFLICT,
           'The drone is being updated by another request, try again',
           HttpStatus.CONFLICT,
         );
@@ -104,12 +113,70 @@ export class DronesRepository {
     }
     return where;
   }
+
+  findMedicationsByCodes(db: Db, codes: string[]): Promise<Medication[]> {
+    return db.medication.findMany({ where: { code: { in: codes } } });
+  }
+
+  async findOrCreateOpenDelivery(db: Db, droneId: string): Promise<Delivery> {
+    const open = await db.delivery.findFirst({
+      where: { droneId, closedAt: null },
+    });
+    return open ?? db.delivery.create({ data: { droneId } });
+  }
+
+  async addItems(
+    db: Db,
+    items: Prisma.DeliveryItemCreateManyInput[],
+  ): Promise<void> {
+    await db.deliveryItem.createMany({ data: items });
+  }
+
+  findOpenItems(db: Db, droneId: string): Promise<LoadedItem[]> {
+    return db.deliveryItem.findMany({
+      where: { delivery: { droneId, closedAt: null } },
+      include: { medication: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async insertKeyIfNew(
+    db: Db,
+    key: string,
+    requestHash: string,
+  ): Promise<boolean> {
+    const { count } = await db.idempotencyKey.createMany({
+      data: [{ key, requestHash }],
+      skipDuplicates: true,
+    });
+    return count === 1;
+  }
+
+  findKey(db: Db, key: string): Promise<IdempotencyKey | null> {
+    return db.idempotencyKey.findUnique({ where: { key } });
+  }
+
+  async restartKey(db: Db, key: string, requestHash: string): Promise<void> {
+    await db.idempotencyKey.update({
+      where: { key },
+      data: { requestHash, responseBody: Prisma.DbNull, createdAt: new Date() },
+    });
+  }
+
+  async saveResponse(db: Db, key: string, responseBody: object): Promise<void> {
+    await db.idempotencyKey.update({
+      where: { key },
+      data: { responseBody },
+    });
+  }
 }
 
 function droneNotFound(id: string): AppError {
   return new AppError(
-    ErrorCode.DRONE_NOT_FOUND,
+    ErrorCode.NOT_FOUND,
     `Drone ${id} was not found`,
     HttpStatus.NOT_FOUND,
   );
 }
+
+export type LoadedItem = DeliveryItem & { medication: Medication };

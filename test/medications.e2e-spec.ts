@@ -67,7 +67,7 @@ describe('Medications (e2e)', () => {
       409,
     );
 
-    expect(res.body.error.code).toBe('DUPLICATE_MEDICATION_CODE');
+    expect(res.body.error.code).toBe('CONFLICT');
   });
 
   it.each([
