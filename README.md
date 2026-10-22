@@ -4,6 +4,13 @@ REST API for managing a fleet of drones that deliver medication.
 
 Built with Node.js, TypeScript, NestJS, PostgreSQL and Prisma.
 
+- Register drones and list the ones ready for loading
+- Load medications without ever going over a drone's weight limit, even under parallel requests
+- Safe retries for loads with an `Idempotency-Key`
+- Move drones through their delivery states
+- Check battery levels, with a background job that keeps a battery audit log
+- Retire drones without losing their history
+
 ## Requirements
 
 - Docker with Docker Compose
@@ -205,8 +212,77 @@ Settings come from environment variables and are checked at startup. The app wil
 | `BATTERY_CHECK_INTERVAL_MS` | `60000`       | How often the battery audit runs                                 |
 | `BATTERY_AUDIT_BATCH_SIZE`  | `1000`        | Drones written per insert during an audit run                    |
 
-## Notes
+## Assumptions
 
-- Migrations run once as their own step, not in every app instance, so the app image does not need the Prisma CLI.
-- The rate limit is counted in memory, so each app instance has its own count. Running several instances would need a shared store such as Redis.
-- Behind a load balancer, Express `trust proxy` must be set so the rate limit uses the real client IP.
+Where the brief left room, these are the choices I made:
+
+- The fleet has at most 10 drones (`FLEET_CAPACITY`). 8 are seeded, so 2 more can be registered.
+- Each drone is registered with its own weight limit, up to `MAX_DRONE_WEIGHT_LIMIT_G` (500g). The model is only a category.
+- Medications are a catalogue. A load refers to them by `code` and `quantity`.
+- Weights are sent in grams with up to 3 decimals and stored as whole milligrams.
+- A battery of exactly 25% can load, and a load can fill a drone to exactly its limit.
+- A load can be built over several requests while the drone is LOADING. A drone can only become LOADED with something on board.
+- Each trip is a delivery. Going back to IDLE closes the delivery. Deliveries and their items are kept as history.
+- Talking to real drones is out of scope, so `PATCH /drones/:id/battery` stands in for battery telemetry. If the battery drops below the minimum while a drone is LOADING, it stays LOADING but cannot take more load.
+- Medication images are placeholder URLs. All times are UTC.
+
+## Design decisions
+
+| Decision                                       | Why                                                                                                               | Trade-off                                                                                                         |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| NestJS 11                                      | Stable and well supported by Jest, Prisma and the rest of the stack                                               | NestJS 12 is newer but had just moved to ESM                                                                      |
+| PostgreSQL                                     | Real transactions, row locks and constraints protect the load rules                                               | Needs a database server, run with Docker Compose                                                                  |
+| Prisma                                         | Typed queries, migrations and seeding                                                                             | Row locks, advisory locks and the batched audit insert use raw SQL                                                |
+| Row lock (`SELECT ... FOR UPDATE`) for loading | Simple to reason about and gives a clear error for each failed rule                                               | Loads on the same drone wait for each other. A conditional update would be faster but can't say which rule failed |
+| Only 2 rules in the database                   | `loaded_weight_mg <= weight_limit_mg` and one open delivery per drone protect the load even if the code has a bug | Format rules and limits stay in the app, so they can change without a migration                                   |
+| Whole milligrams                               | Integer sums are exact, the same reason money is kept in kobo or cents                                            | Grams are converted at the edge of the API                                                                        |
+| Idempotency key on load only                   | A retried load is the one write that could do damage twice                                                        | Register, battery update, state changes and retire are already safe to retry                                      |
+| Advisory locks                                 | Keep the fleet cap safe under parallel registrations, and let only one app instance run the battery audit         | Two raw SQL calls                                                                                                 |
+| Page and limit pagination                      | Simple and familiar                                                                                               | Slower on very deep pages. Cursor pagination is listed under next steps                                           |
+| Separate migrate step                          | Migrations run once per start, not in every app instance, and the app image doesn't carry the Prisma CLI          | One more service in Docker Compose                                                                                |
+| All limits from env                            | Changing a limit is a restart, not a code change                                                                  | Changing them at runtime would need a settings table                                                              |
+| API key and rate limit                         | How payment-style APIs usually let businesses in                                                                  | One shared key and an in-memory counter, both noted below                                                         |
+
+Left out on purpose:
+
+- **Redis**: there is nothing to cache, and Postgres already handles the locks and idempotency keys inside the same transaction.
+- **A message queue**: every request finishes in one short transaction. A queue would make sense for real drone telemetry.
+- **Microservices**: one small domain and one database. The modules can be split later if needed.
+
+## Project structure
+
+```
+src/
+  common/       errors, response format, pagination, API key guard, weight conversion
+  config/       environment checks and logger setup
+  database/     Prisma client, seed data and seed script
+  modules/
+    drones/     register, list, state changes, loading, retiring
+    medications/ medication catalogue
+    battery/    battery level, history and the audit job
+    health/     health check
+prisma/         schema and migrations
+test/           end-to-end tests against a real database
+```
+
+Rules that don't need the database, like the state machine and the load checks, live in `modules/*/domain` as plain functions with unit tests.
+
+## Going to production
+
+- **Secrets**: `API_KEY` and the database credentials should come from a secret manager. The key in `docker-compose.yml` and `.env.example` is only for local use.
+- **Migrations**: run them once per release, before the new app version starts. Keep changes backward compatible so the old version keeps working during the rollout.
+- **Several instances**: row locks and the battery audit lock already work across instances. The rate limit counter is in memory, so it needs a shared store such as Redis. Behind a load balancer, set Express `trust proxy` so the rate limit sees the real client IP.
+- **Health checks**: point the load balancer at `/health`. It returns 503 when the database is down.
+- **Logs**: JSON logs with a request ID on every line, ready to ship to Grafana Loki or similar.
+- **Battery audit table**: it grows by one row per drone per run. Add a retention period or monthly partitions.
+- **Backups**: regular database backups, with a tested restore.
+
+## What I'd do next
+
+- Cursor pagination for large tables, and an `asOf` time so battery history pages stay stable while new rows arrive
+- Receive drone telemetry through a queue instead of setting it with `PATCH`
+- Medication image upload with pre-signed S3 URLs
+- User accounts and roles, so retiring records who did it and a drone can be brought back into service
+- One API key per client instead of a shared key
+- Swagger schemas for the `{ success, data, error }` response format
+- Upgrade to ESLint 10
