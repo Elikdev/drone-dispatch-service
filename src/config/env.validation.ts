@@ -1,5 +1,7 @@
-import { plainToInstance, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
+import { toBoolean } from '../common/validation/to-boolean';
 import {
+  IsBoolean,
   IsEnum,
   IsIn,
   IsInt,
@@ -100,6 +102,21 @@ export class EnvironmentVariables {
   @IsInt()
   @Min(1)
   IDEMPOTENCY_KEY_TTL_HOURS = 24;
+
+  @Transform(toBoolean)
+  @IsBoolean()
+  BATTERY_AUDIT_ENABLED = true;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  BATTERY_CHECK_INTERVAL_MS = 60000;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10000)
+  BATTERY_AUDIT_BATCH_SIZE = 1000;
 }
 
 export function validateEnv(

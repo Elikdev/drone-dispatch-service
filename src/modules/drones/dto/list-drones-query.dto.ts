@@ -1,13 +1,8 @@
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto';
+import { toBoolean } from '../../../common/validation/to-boolean';
 import { DroneState } from '../../../generated/prisma/client';
-
-const toBoolean = ({ value }: { value: unknown }) => {
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  return value;
-};
 
 export class ListDronesQueryDto extends PaginationQueryDto {
   @IsOptional()

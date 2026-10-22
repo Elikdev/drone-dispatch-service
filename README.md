@@ -39,22 +39,27 @@ npm run start:dev
 
 All endpoints are under `/api/v1` and need the `x-api-key` header. Weights are in grams.
 
-| Brief asks for                      | Endpoint                      |
-| ----------------------------------- | ----------------------------- |
-| Register a drone                    | `POST /drones`                |
-| Check available drones for loading  | `GET /drones?available=true`  |
-| Load a drone with medication        | `POST /drones/:id/load`       |
-| Check loaded medication for a drone | `GET /drones/:id/medications` |
+| Brief asks for                           | Endpoint                                                    |
+| ---------------------------------------- | ----------------------------------------------------------- |
+| Register a drone                         | `POST /drones`                                              |
+| Check available drones for loading       | `GET /drones?available=true`                                |
+| Load a drone with medication             | `POST /drones/:id/load`                                     |
+| Check loaded medication for a drone      | `GET /drones/:id/medications`                               |
+| Check battery level for a drone          | `GET /drones/:id/battery`                                   |
+| Periodic battery check with an audit log | Background job, read with `GET /drones/:id/battery/history` |
 
-| Method | Path                      | What it does                                                                  |
-| ------ | ------------------------- | ----------------------------------------------------------------------------- |
-| POST   | `/drones`                 | Register a drone. It starts IDLE and empty                                    |
-| GET    | `/drones`                 | List drones. Filters: `available`, `state`, `page`, `limit`                   |
-| GET    | `/drones/:id`             | Get one drone                                                                 |
-| POST   | `/drones/:id/transitions` | Move a drone to its next state, e.g. `{ "to": "LOADED" }`                     |
-| POST   | `/drones/:id/load`        | Load medications, e.g. `{ "items": [{ "code": "PARA_500", "quantity": 2 }] }` |
-| GET    | `/drones/:id/medications` | Medications on the drone's current delivery                                   |
-| GET    | `/medications`            | Medication catalogue. Filters: `page`, `limit`                                |
+| Method | Path                          | What it does                                                                      |
+| ------ | ----------------------------- | --------------------------------------------------------------------------------- |
+| POST   | `/drones`                     | Register a drone. It starts IDLE and empty                                        |
+| GET    | `/drones`                     | List drones. Filters: `available`, `state`, `page`, `limit`                       |
+| GET    | `/drones/:id`                 | Get one drone                                                                     |
+| POST   | `/drones/:id/transitions`     | Move a drone to its next state, e.g. `{ "to": "LOADED" }`                         |
+| POST   | `/drones/:id/load`            | Load medications, e.g. `{ "items": [{ "code": "PARA_500", "quantity": 2 }] }`     |
+| GET    | `/drones/:id/medications`     | Medications on the drone's current delivery                                       |
+| GET    | `/medications`                | Medication catalogue. Filters: `page`, `limit`                                    |
+| GET    | `/drones/:id/battery`         | Battery level and whether it is too low to load                                   |
+| PATCH  | `/drones/:id/battery`         | Set the battery level, e.g. `{ "batteryPct": 40 }`. Stands in for drone telemetry |
+| GET    | `/drones/:id/battery/history` | Battery audit log, newest first. Filters: `page`, `limit`                         |
 
 Example:
 
@@ -70,6 +75,12 @@ curl -X POST http://localhost:3000/api/v1/drones \
 Each load runs in one database transaction that locks the drone's row, so two loads on the same drone wait for each other and can never go over the weight limit together. Loads on other drones are not affected.
 
 Send an `Idempotency-Key` header to make a load safe to retry. The same key with the same body returns the first response (with `idempotent-replayed: true`) and loads nothing new. The same key with a different body is rejected. Keys expire after `IDEMPOTENCY_KEY_TTL_HOURS`.
+
+### Battery audit
+
+Every `BATTERY_CHECK_INTERVAL_MS` a background job writes each drone's battery level and state to the audit log in batched inserts, all with the same time. A run is skipped if the last one is still going, and only one app instance writes the log at a time (Postgres advisory lock). A failed run is logged and the next one tries again.
+
+If a drone's battery drops below `MIN_LOADING_BATTERY_PCT` while it is LOADING, it stays LOADING but cannot take more load until the battery is back up.
 
 A drone can be loaded when its battery is at least `MIN_LOADING_BATTERY_PCT` and it is IDLE, or LOADING with space left.
 
@@ -177,6 +188,9 @@ Settings come from environment variables and are checked at startup. The app wil
 | `PAGINATION_MAX_LIMIT`      | `100`         | Largest page size. A bigger `limit` is lowered to this           |
 | `DB_LOCK_TIMEOUT_MS`        | `3000`        | How long a request waits for a drone another request is changing |
 | `IDEMPOTENCY_KEY_TTL_HOURS` | `24`          | How long a load `Idempotency-Key` is remembered                  |
+| `BATTERY_AUDIT_ENABLED`     | `true`        | Turns the battery audit job on or off                            |
+| `BATTERY_CHECK_INTERVAL_MS` | `60000`       | How often the battery audit runs                                 |
+| `BATTERY_AUDIT_BATCH_SIZE`  | `1000`        | Drones written per insert during an audit run                    |
 
 ## Notes
 

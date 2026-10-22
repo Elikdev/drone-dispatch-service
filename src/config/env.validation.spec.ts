@@ -22,6 +22,9 @@ describe('validateEnv', () => {
       PAGINATION_MAX_LIMIT: 100,
       DB_LOCK_TIMEOUT_MS: 3000,
       IDEMPOTENCY_KEY_TTL_HOURS: 24,
+      BATTERY_AUDIT_ENABLED: true,
+      BATTERY_CHECK_INTERVAL_MS: 60000,
+      BATTERY_AUDIT_BATCH_SIZE: 1000,
     });
   });
 
@@ -59,10 +62,19 @@ describe('validateEnv', () => {
     ['MAX_DRONE_WEIGHT_LIMIT_G', '0'],
     ['MAX_DRONE_WEIGHT_LIMIT_G', '12.3456'],
     ['FLEET_CAPACITY', '0'],
+    ['BATTERY_AUDIT_ENABLED', 'yes'],
+    ['BATTERY_CHECK_INTERVAL_MS', '10'],
   ])('fails when %s is %s', (name, value) => {
     expect(() => validateEnv({ ...validEnv, [name]: value })).toThrow(
       new RegExp(name),
     );
+  });
+
+  it('reads BATTERY_AUDIT_ENABLED=false as false', () => {
+    expect(
+      validateEnv({ ...validEnv, BATTERY_AUDIT_ENABLED: 'false' })
+        .BATTERY_AUDIT_ENABLED,
+    ).toBe(false);
   });
 
   it('fails when the default page size is bigger than the max', () => {
