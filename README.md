@@ -34,11 +34,10 @@ npm run start:dev
 
 ## Tests
 
-Tests use the `drone_dispatch_test` database, which Docker Compose creates on first start.
+Tests use the `drone_dispatch_test` database, which Docker Compose creates on first start. Migrations run on it automatically before the tests.
 
 ```bash
 docker compose up -d db
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/drone_dispatch_test npx prisma migrate deploy
 npm test
 npm run test:cov
 ```

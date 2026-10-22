@@ -52,7 +52,9 @@
     },
     "setupFiles": [
       "<rootDir>/test/setup-env.ts"
-    ]
+    ],
+    "globalSetup": "<rootDir>/test/global-setup.ts",
+    "maxWorkers": 1
   },
   "dependencies": {
     "@nestjs/common": "^11.2.7",

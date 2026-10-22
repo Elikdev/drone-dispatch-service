@@ -35,6 +35,5 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
-      - run: npx prisma migrate deploy
       - run: npm run test:cov
       - run: docker build -t drone-dispatch-service .
