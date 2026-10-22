@@ -46,7 +46,7 @@ npm run start:dev
 
 All endpoints are under `/api/v1` and need the `x-api-key` header. Weights are in grams.
 
-| Brief asks for                           | Endpoint                                                    |
+| Requirement                              | Endpoint                                                    |
 | ---------------------------------------- | ----------------------------------------------------------- |
 | Register a drone                         | `POST /drones`                                              |
 | Check available drones for loading       | `GET /drones?available=true`                                |
@@ -214,7 +214,7 @@ Settings come from environment variables and are checked at startup. The app wil
 
 ## Assumptions
 
-Where the brief left room, these are the choices I made:
+Where the requirements left room, these are the choices I made:
 
 - The fleet has at most 10 drones (`FLEET_CAPACITY`). 8 are seeded, so 2 more can be registered.
 - Each drone is registered with its own weight limit, up to `MAX_DRONE_WEIGHT_LIMIT_G` (500g). The model is only a category.
@@ -228,20 +228,20 @@ Where the brief left room, these are the choices I made:
 
 ## Design decisions
 
-| Decision                                       | Why                                                                                                               | Trade-off                                                                                                         |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| NestJS 11                                      | Stable and well supported by Jest, Prisma and the rest of the stack                                               | NestJS 12 is newer but had just moved to ESM                                                                      |
-| PostgreSQL                                     | Real transactions, row locks and constraints protect the load rules                                               | Needs a database server, run with Docker Compose                                                                  |
-| Prisma                                         | Typed queries, migrations and seeding                                                                             | Row locks, advisory locks and the batched audit insert use raw SQL                                                |
-| Row lock (`SELECT ... FOR UPDATE`) for loading | Simple to reason about and gives a clear error for each failed rule                                               | Loads on the same drone wait for each other. A conditional update would be faster but can't say which rule failed |
-| Only 2 rules in the database                   | `loaded_weight_mg <= weight_limit_mg` and one open delivery per drone protect the load even if the code has a bug | Format rules and limits stay in the app, so they can change without a migration                                   |
-| Whole milligrams                               | Integer sums are exact, the same reason money is kept in kobo or cents                                            | Grams are converted at the edge of the API                                                                        |
-| Idempotency key on load only                   | A retried load is the one write that could do damage twice                                                        | Register, battery update, state changes and retire are already safe to retry                                      |
-| Advisory locks                                 | Keep the fleet cap safe under parallel registrations, and let only one app instance run the battery audit         | Two raw SQL calls                                                                                                 |
-| Page and limit pagination                      | Simple and familiar                                                                                               | Slower on very deep pages. Cursor pagination is listed under next steps                                           |
-| Separate migrate step                          | Migrations run once per start, not in every app instance, and the app image doesn't carry the Prisma CLI          | One more service in Docker Compose                                                                                |
-| All limits from env                            | Changing a limit is a restart, not a code change                                                                  | Changing them at runtime would need a settings table                                                              |
-| API key and rate limit                         | How payment-style APIs usually let businesses in                                                                  | One shared key and an in-memory counter, both noted below                                                         |
+| Decision                                       | Why                                                                                                               | Trade-off                                                                                                                               |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| NestJS 11                                      | Stable and well supported by Jest, Prisma and the rest of the stack                                               | NestJS 12 is newer but had just moved to ESM                                                                                            |
+| PostgreSQL                                     | Real transactions, row locks and constraints protect the load rules                                               | Needs a database server, run with Docker Compose                                                                                        |
+| Prisma                                         | Typed queries, migrations and seeding                                                                             | Row locks, advisory locks and the batched audit insert use raw SQL                                                                      |
+| Row lock (`SELECT ... FOR UPDATE`) for loading | Simple to reason about and gives a clear error for each failed rule                                               | Loads on the same drone wait for each other. A conditional update would be faster but can't say which rule failed                       |
+| Only 2 rules in the database                   | `loaded_weight_mg <= weight_limit_mg` and one open delivery per drone protect the load even if the code has a bug | Format rules and limits stay in the app, so they can change without a migration                                                         |
+| Whole milligrams                               | Integer sums are exact, the same reason money is kept in kobo or cents                                            | Grams are converted at the edge of the API                                                                                              |
+| Idempotency key on load only                   | A retried load is the one write that could do damage twice                                                        | Register, battery update, state changes and retire are already safe to retry                                                            |
+| Advisory locks                                 | Keep the fleet cap safe under parallel registrations, and let only one app instance run the battery audit         | Two raw SQL calls                                                                                                                       |
+| Page and limit pagination                      | Simple and familiar                                                                                               | Slower on very deep pages. Cursor pagination is listed under next steps                                                                 |
+| Separate migrate step                          | Migrations run once per start, not in every app instance                                                          | One more service in Docker Compose. The app image still includes the Prisma CLI, because `@prisma/client` lists it as a peer dependency |
+| All limits from env                            | Changing a limit is a restart, not a code change                                                                  | Changing them at runtime would need a settings table                                                                                    |
+| API key and rate limit                         | How payment-style APIs usually let businesses in                                                                  | One shared key and an in-memory counter, both noted below                                                                               |
 
 Left out on purpose:
 
@@ -285,4 +285,5 @@ Rules that don't need the database, like the state machine and the load checks, 
 - User accounts and roles, so retiring records who did it and a drone can be brought back into service
 - One API key per client instead of a shared key
 - Swagger schemas for the `{ success, data, error }` response format
+- Trim the app image (about 540 MB): the Prisma CLI still comes in as a peer of `@prisma/client`
 - Upgrade to ESLint 10
