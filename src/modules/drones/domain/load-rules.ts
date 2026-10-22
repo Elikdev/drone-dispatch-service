@@ -2,7 +2,7 @@ import { HttpStatus } from '@nestjs/common';
 import { AppError } from '../../../common/errors/app-error';
 import { ErrorCode } from '../../../common/errors/error-codes';
 import { mgToGrams } from '../../../common/units/weight';
-import { Drone } from '../../../generated/prisma/client';
+import { Drone, DroneState } from '../../../generated/prisma/client';
 
 export const MAX_ITEM_QUANTITY = 10_000;
 export const MAX_LOAD_LINES = 50;
@@ -23,7 +23,7 @@ export function mergeLoadLines(lines: LoadLine[]): LoadLine[] {
 }
 
 export function assertLoadable(drone: Pick<Drone, 'state'>): void {
-  if (drone.state !== 'IDLE' && drone.state !== 'LOADING') {
+  if (drone.state !== DroneState.IDLE && drone.state !== DroneState.LOADING) {
     throw new AppError(
       ErrorCode.DRONE_NOT_LOADABLE,
       `A drone in state ${drone.state} cannot be loaded`,

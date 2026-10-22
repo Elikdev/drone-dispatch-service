@@ -1,41 +1,26 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Pagination, resolvePage } from '../../common/pagination/paginate';
+import { Pagination } from '../../common/pagination/paginate';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
-import { EnvironmentVariables } from '../../config/env.validation';
-import { PrismaService } from '../../database/prisma.service';
+import { CreateMedicationDto } from './dto/create-medication.dto';
 import { MedicationResponse, toMedicationResponse } from './medication.mapper';
+import { MedicationsService } from './medications.service';
 
 @ApiTags('medications')
 @Controller('medications')
 export class MedicationsController {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly config: ConfigService<EnvironmentVariables, true>,
-  ) {}
+  constructor(private readonly medications: MedicationsService) {}
 
   @Get()
   async list(
     @Query() query: PaginationQueryDto,
   ): Promise<{ medications: MedicationResponse[]; pagination: Pagination }> {
-    const page = resolvePage(query, {
-      defaultLimit: this.config.get('PAGINATION_DEFAULT_LIMIT', {
-        infer: true,
-      }),
-      maxLimit: this.config.get('PAGINATION_MAX_LIMIT', { infer: true }),
-    });
-    const [medications, total] = await Promise.all([
-      this.prisma.medication.findMany({
-        orderBy: { code: 'asc' },
-        skip: page.skip,
-        take: page.limit,
-      }),
-      this.prisma.medication.count(),
-    ]);
-    return {
-      medications: medications.map(toMedicationResponse),
-      pagination: { total, page: page.page, limit: page.limit },
-    };
+    const { medications, pagination } = await this.medications.list(query);
+    return { medications: medications.map(toMedicationResponse), pagination };
+  }
+
+  @Post()
+  async create(@Body() dto: CreateMedicationDto): Promise<MedicationResponse> {
+    return toMedicationResponse(await this.medications.create(dto));
   }
 }

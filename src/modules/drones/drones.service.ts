@@ -111,7 +111,7 @@ export class DronesService {
         this.config.get('MIN_LOADING_BATTERY_PCT', { infer: true }),
       );
 
-      if (to === 'IDLE') {
+      if (to === DroneState.IDLE) {
         await tx.delivery.updateMany({
           where: { droneId: id, closedAt: null },
           data: { closedAt: new Date() },
@@ -119,7 +119,10 @@ export class DronesService {
       }
       return tx.drone.update({
         where: { id },
-        data: { state: to, ...(to === 'IDLE' && { loadedWeightMg: 0 }) },
+        data: {
+          state: to,
+          ...(to === DroneState.IDLE && { loadedWeightMg: 0 }),
+        },
       });
     });
   }
@@ -129,7 +132,7 @@ export class DronesService {
       if (drone.retiredAt) {
         return Promise.resolve(drone);
       }
-      if (drone.state !== 'IDLE') {
+      if (drone.state !== DroneState.IDLE) {
         throw new AppError(
           ErrorCode.DRONE_IN_USE,
           `A drone in state ${drone.state} cannot be retired, unload it or finish the delivery first`,
