@@ -4,6 +4,7 @@ import { Pagination, resolvePage } from '../../common/pagination/paginate';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { EnvironmentVariables } from '../../config/env.validation';
 import { PrismaService } from '../../database/prisma.service';
+import { assertInService } from '../drones/domain/drone-state';
 import { DronesRepository } from '../drones/drones.repository';
 import {
   BatteryLogResponse,
@@ -28,7 +29,7 @@ export class BatteryService {
   }
 
   async update(droneId: string, batteryPct: number): Promise<BatteryResponse> {
-    await this.drones.findById(droneId);
+    assertInService(await this.drones.findById(droneId));
     const drone = await this.prisma.drone.update({
       where: { id: droneId },
       data: { batteryPct },

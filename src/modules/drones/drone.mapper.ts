@@ -10,6 +10,8 @@ export interface DroneResponse {
   remainingCapacityG: number;
   batteryPct: number;
   state: DroneState;
+  retiredAt: Date | null;
+  retiredReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +26,8 @@ export function toDroneResponse(drone: Drone): DroneResponse {
     remainingCapacityG: mgToGrams(drone.weightLimitMg - drone.loadedWeightMg),
     batteryPct: drone.batteryPct,
     state: drone.state,
+    retiredAt: drone.retiredAt,
+    retiredReason: drone.retiredReason,
     createdAt: drone.createdAt,
     updatedAt: drone.updatedAt,
   };

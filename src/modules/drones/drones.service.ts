@@ -9,7 +9,7 @@ import { Db } from '../../database/database.types';
 import { isUniqueViolation } from '../../database/prisma-errors';
 import { PrismaService } from '../../database/prisma.service';
 import { Drone, DroneState } from '../../generated/prisma/client';
-import { assertCanTransition } from './domain/drone-state';
+import { assertCanTransition, assertInService } from './domain/drone-state';
 import { DronesRepository } from './drones.repository';
 import { ListDronesQueryDto } from './dto/list-drones-query.dto';
 import { RegisterDroneDto } from './dto/register-drone.dto';
@@ -47,7 +47,7 @@ export class DronesService {
     try {
       return await this.prisma.$transaction(async (tx) => {
         await this.drones.lockFleet(tx);
-        if ((await this.drones.count(tx)) >= capacity) {
+        if ((await this.drones.countInService(tx)) >= capacity) {
           throw new AppError(
             ErrorCode.FLEET_FULL,
             `The fleet already has ${capacity} drones`,
@@ -85,6 +85,7 @@ export class DronesService {
     const { drones, total } = await this.drones.findPage(
       {
         state: query.state,
+        includeRetired: query.includeRetired,
         availableWithBatteryPct: query.available
           ? this.config.get('MIN_LOADING_BATTERY_PCT', { infer: true })
           : undefined,
@@ -103,6 +104,7 @@ export class DronesService {
 
   transition(id: string, to: DroneState): Promise<Drone> {
     return this.inDroneLock(id, async (tx, drone) => {
+      assertInService(drone);
       assertCanTransition(
         drone,
         to,
@@ -119,6 +121,23 @@ export class DronesService {
         where: { id },
         data: { state: to, ...(to === 'IDLE' && { loadedWeightMg: 0 }) },
       });
+    });
+  }
+
+  retire(id: string, reason: string | undefined): Promise<Drone> {
+    return this.inDroneLock(id, (tx, drone) => {
+      if (drone.retiredAt) {
+        return Promise.resolve(drone);
+      }
+      if (drone.state !== 'IDLE') {
+        throw new AppError(
+          ErrorCode.DRONE_IN_USE,
+          `A drone in state ${drone.state} cannot be retired, unload it or finish the delivery first`,
+          HttpStatus.CONFLICT,
+          { state: drone.state },
+        );
+      }
+      return this.drones.retire(tx, id, reason);
     });
   }
 

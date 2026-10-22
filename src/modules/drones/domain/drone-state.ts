@@ -57,3 +57,14 @@ export function assertCanTransition(
     );
   }
 }
+
+export function assertInService(drone: Pick<Drone, 'id' | 'retiredAt'>): void {
+  if (drone.retiredAt) {
+    throw new AppError(
+      ErrorCode.DRONE_RETIRED,
+      `Drone ${drone.id} is retired`,
+      HttpStatus.CONFLICT,
+      { retiredAt: drone.retiredAt },
+    );
+  }
+}

@@ -48,18 +48,19 @@ All endpoints are under `/api/v1` and need the `x-api-key` header. Weights are i
 | Check battery level for a drone          | `GET /drones/:id/battery`                                   |
 | Periodic battery check with an audit log | Background job, read with `GET /drones/:id/battery/history` |
 
-| Method | Path                          | What it does                                                                      |
-| ------ | ----------------------------- | --------------------------------------------------------------------------------- |
-| POST   | `/drones`                     | Register a drone. It starts IDLE and empty                                        |
-| GET    | `/drones`                     | List drones. Filters: `available`, `state`, `page`, `limit`                       |
-| GET    | `/drones/:id`                 | Get one drone                                                                     |
-| POST   | `/drones/:id/transitions`     | Move a drone to its next state, e.g. `{ "to": "LOADED" }`                         |
-| POST   | `/drones/:id/load`            | Load medications, e.g. `{ "items": [{ "code": "PARA_500", "quantity": 2 }] }`     |
-| GET    | `/drones/:id/medications`     | Medications on the drone's current delivery                                       |
-| GET    | `/medications`                | Medication catalogue. Filters: `page`, `limit`                                    |
-| GET    | `/drones/:id/battery`         | Battery level and whether it is too low to load                                   |
-| PATCH  | `/drones/:id/battery`         | Set the battery level, e.g. `{ "batteryPct": 40 }`. Stands in for drone telemetry |
-| GET    | `/drones/:id/battery/history` | Battery audit log, newest first. Filters: `page`, `limit`                         |
+| Method | Path                          | What it does                                                                           |
+| ------ | ----------------------------- | -------------------------------------------------------------------------------------- |
+| POST   | `/drones`                     | Register a drone. It starts IDLE and empty                                             |
+| GET    | `/drones`                     | List drones. Filters: `available`, `state`, `includeRetired`, `page`, `limit`          |
+| GET    | `/drones/:id`                 | Get one drone                                                                          |
+| POST   | `/drones/:id/transitions`     | Move a drone to its next state, e.g. `{ "to": "LOADED" }`                              |
+| POST   | `/drones/:id/load`            | Load medications, e.g. `{ "items": [{ "code": "PARA_500", "quantity": 2 }] }`          |
+| GET    | `/drones/:id/medications`     | Medications on the drone's current delivery                                            |
+| GET    | `/medications`                | Medication catalogue. Filters: `page`, `limit`                                         |
+| GET    | `/drones/:id/battery`         | Battery level and whether it is too low to load                                        |
+| PATCH  | `/drones/:id/battery`         | Set the battery level, e.g. `{ "batteryPct": 40 }`. Stands in for drone telemetry      |
+| GET    | `/drones/:id/battery/history` | Battery audit log, newest first. Filters: `page`, `limit`                              |
+| POST   | `/drones/:id/retire`          | Take a drone out of service and keep its history, e.g. `{ "reason": "Motor failure" }` |
 
 Example:
 
@@ -75,6 +76,18 @@ curl -X POST http://localhost:3000/api/v1/drones \
 Each load runs in one database transaction that locks the drone's row, so two loads on the same drone wait for each other and can never go over the weight limit together. Loads on other drones are not affected.
 
 Send an `Idempotency-Key` header to make a load safe to retry. The same key with the same body returns the first response (with `idempotent-replayed: true`) and loads nothing new. The same key with a different body is rejected. Keys expire after `IDEMPOTENCY_KEY_TTL_HOURS`.
+
+### Retiring a drone
+
+Drones are never deleted, because their deliveries and battery history must stay. `POST /drones/:id/retire` takes an IDLE drone out of service instead. A retired drone:
+
+- is hidden from `GET /drones` (add `includeRetired=true` to see it) and never shows as available
+- cannot be loaded, moved to another state or have its battery updated (`DRONE_RETIRED`)
+- does not count towards `FLEET_CAPACITY`, so a replacement can be registered
+- is skipped by the battery audit
+- keeps its serial number, details and history readable
+
+Retiring twice returns the drone unchanged. A drone that is not IDLE gets `DRONE_IN_USE`. Not built yet: bringing a drone back into service, and recording who retired it (needs user accounts).
 
 ### Battery audit
 
@@ -93,7 +106,7 @@ LOADING -> IDLE (cancel)
 
 Going back to IDLE closes the delivery and empties the drone. Moving to LOADING or LOADED needs enough battery, and LOADED needs something on board.
 
-Error codes: `VALIDATION_ERROR`, `DRONE_NOT_FOUND`, `MEDICATION_NOT_FOUND`, `DUPLICATE_SERIAL`, `FLEET_FULL`, `INVALID_STATE_TRANSITION`, `DRONE_NOT_LOADABLE`, `BATTERY_TOO_LOW`, `DRONE_OVERWEIGHT`, `IDEMPOTENCY_KEY_REUSED`, `DRONE_BUSY` (another request is changing the same drone; try again).
+Error codes: `VALIDATION_ERROR`, `DRONE_NOT_FOUND`, `MEDICATION_NOT_FOUND`, `DUPLICATE_SERIAL`, `FLEET_FULL`, `INVALID_STATE_TRANSITION`, `DRONE_NOT_LOADABLE`, `BATTERY_TOO_LOW`, `DRONE_OVERWEIGHT`, `IDEMPOTENCY_KEY_REUSED`, `DRONE_IN_USE`, `DRONE_RETIRED`, `DRONE_BUSY` (another request is changing the same drone; try again).
 
 ## Seed data
 

@@ -1,5 +1,9 @@
 import { DroneState } from '../../../generated/prisma/client';
-import { ALLOWED_TRANSITIONS, assertCanTransition } from './drone-state';
+import {
+  ALLOWED_TRANSITIONS,
+  assertCanTransition,
+  assertInService,
+} from './drone-state';
 
 const MIN_BATTERY = 25;
 const STATES = Object.keys(ALLOWED_TRANSITIONS) as DroneState[];
@@ -58,6 +62,18 @@ describe('assertCanTransition', () => {
       assertCanTransition(drone('LOADING', 80, 0), 'LOADED', MIN_BATTERY),
     ).toThrow(
       expect.objectContaining({ code: 'INVALID_STATE_TRANSITION' }) as Error,
+    );
+  });
+});
+
+describe('assertInService', () => {
+  it('allows a drone that is not retired', () => {
+    expect(() => assertInService({ id: 'd1', retiredAt: null })).not.toThrow();
+  });
+
+  it('rejects a retired drone', () => {
+    expect(() => assertInService({ id: 'd1', retiredAt: new Date() })).toThrow(
+      expect.objectContaining({ code: 'DRONE_RETIRED' }) as Error,
     );
   });
 });
