@@ -95,9 +95,9 @@ export class DronesRepository {
     if (filter.availableWithBatteryPct !== undefined) {
       where.batteryPct = { gte: filter.availableWithBatteryPct };
       where.OR = [
-        { state: 'IDLE' },
+        { state: DroneState.IDLE },
         {
-          state: 'LOADING',
+          state: DroneState.LOADING,
           loadedWeightMg: { lt: this.prisma.drone.fields.weightLimitMg },
         },
       ];

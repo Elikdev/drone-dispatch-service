@@ -6,7 +6,7 @@ import { ErrorCode } from '../../common/errors/error-codes';
 import { EnvironmentVariables } from '../../config/env.validation';
 import { Db } from '../../database/database.types';
 import { PrismaService } from '../../database/prisma.service';
-import { Medication } from '../../generated/prisma/client';
+import { DroneState, Medication } from '../../generated/prisma/client';
 import {
   assertEnoughBatteryToLoad,
   assertInService,
@@ -96,7 +96,7 @@ export class LoadingService {
         where: { id: droneId },
         data: {
           loadedWeightMg: { increment: addedWeightMg },
-          state: 'LOADING',
+          state: DroneState.LOADING,
         },
       });
 

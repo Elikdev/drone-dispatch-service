@@ -15,11 +15,12 @@ import {
   validateSync,
 } from 'class-validator';
 
-export enum NodeEnv {
-  Development = 'development',
-  Test = 'test',
-  Production = 'production',
-}
+export const NodeEnv = {
+  Development: 'development',
+  Test: 'test',
+  Production: 'production',
+} as const;
+export type NodeEnv = (typeof NodeEnv)[keyof typeof NodeEnv];
 
 export const LOG_LEVELS = [
   'fatal',

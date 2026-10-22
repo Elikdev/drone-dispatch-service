@@ -43,6 +43,11 @@ export function configureApp(app: INestApplication): void {
     )
     .addSecurityRequirements(API_KEY_HEADER)
     .build();
+  const http = app.getHttpAdapter();
+  http.get('/', (_req: unknown, res: unknown) => {
+    http.redirect(res, HttpStatus.FOUND, '/docs');
+  });
+
   SwaggerModule.setup(
     'docs',
     app,

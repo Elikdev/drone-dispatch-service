@@ -82,6 +82,12 @@ describe('App (e2e)', () => {
     await request(app.getHttpServer()).get('/api/v1/probe/public').expect(200);
   });
 
+  it('sends the root url to the API docs without a key', async () => {
+    const res = await request(app.getHttpServer()).get('/').expect(302);
+
+    expect(res.headers.location).toBe('/docs');
+  });
+
   it('returns the error format for an unknown route', async () => {
     const res = await request(app.getHttpServer())
       .get('/api/v1/nope')

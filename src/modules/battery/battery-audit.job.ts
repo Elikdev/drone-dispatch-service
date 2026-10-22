@@ -10,6 +10,7 @@ import { Db } from '../../database/database.types';
 import { PrismaService } from '../../database/prisma.service';
 
 const RUN_TIMEOUT_MS = 60_000;
+const CONNECTION_WAIT_MS = 10_000;
 const FIRST_ID = '00000000-0000-0000-0000-000000000000';
 
 export interface AuditRunResult {
@@ -52,7 +53,7 @@ export class BatteryAuditJob implements OnModuleInit, OnModuleDestroy {
     try {
       const result = await this.prisma.$transaction(
         async (tx) => ((await this.tryLock(tx)) ? this.writeLogs(tx) : null),
-        { timeout: RUN_TIMEOUT_MS },
+        { timeout: RUN_TIMEOUT_MS, maxWait: CONNECTION_WAIT_MS },
       );
       if (result) {
         this.logger.log(

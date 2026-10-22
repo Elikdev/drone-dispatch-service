@@ -6,12 +6,12 @@ import { Drone, DroneState } from '../../../generated/prisma/client';
 type DroneSnapshot = Pick<Drone, 'state' | 'batteryPct' | 'loadedWeightMg'>;
 
 export const ALLOWED_TRANSITIONS: Record<DroneState, readonly DroneState[]> = {
-  IDLE: ['LOADING'],
-  LOADING: ['LOADED', 'IDLE'],
-  LOADED: ['DELIVERING'],
-  DELIVERING: ['DELIVERED'],
-  DELIVERED: ['RETURNING'],
-  RETURNING: ['IDLE'],
+  [DroneState.IDLE]: [DroneState.LOADING],
+  [DroneState.LOADING]: [DroneState.LOADED, DroneState.IDLE],
+  [DroneState.LOADED]: [DroneState.DELIVERING],
+  [DroneState.DELIVERING]: [DroneState.DELIVERED],
+  [DroneState.DELIVERED]: [DroneState.RETURNING],
+  [DroneState.RETURNING]: [DroneState.IDLE],
 };
 
 export function assertEnoughBatteryToLoad(
@@ -44,11 +44,11 @@ export function assertCanTransition(
     );
   }
 
-  if (to === 'LOADING' || to === 'LOADED') {
+  if (to === DroneState.LOADING || to === DroneState.LOADED) {
     assertEnoughBatteryToLoad(drone.batteryPct, minBatteryPct);
   }
 
-  if (to === 'LOADED' && drone.loadedWeightMg === 0) {
+  if (to === DroneState.LOADED && drone.loadedWeightMg === 0) {
     throw new AppError(
       ErrorCode.INVALID_STATE_TRANSITION,
       'A drone cannot be LOADED with nothing on it',

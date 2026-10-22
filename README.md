@@ -25,7 +25,7 @@ docker compose up --build
 On start, a one-off `migrate` service applies database migrations and loads the seed data, then exits. The API starts only after it finishes successfully.
 
 - API: `http://localhost:3000/api/v1`
-- Docs (Swagger): `http://localhost:3000/docs`
+- Docs (Swagger): `http://localhost:3000/docs` (opening `http://localhost:3000` takes you there too)
 - Health check: `http://localhost:3000/health`
 
 Every API request needs the header `x-api-key`. With Docker Compose the key is `local-dev-api-key-change-me`. In Swagger, click **Authorize** and paste it.
@@ -55,19 +55,20 @@ All endpoints are under `/api/v1` and need the `x-api-key` header. Weights are i
 | Check battery level for a drone          | `GET /drones/:id/battery`                                   |
 | Periodic battery check with an audit log | Background job, read with `GET /drones/:id/battery/history` |
 
-| Method | Path                          | What it does                                                                           |
-| ------ | ----------------------------- | -------------------------------------------------------------------------------------- |
-| POST   | `/drones`                     | Register a drone. It starts IDLE and empty                                             |
-| GET    | `/drones`                     | List drones. Filters: `available`, `state`, `includeRetired`, `page`, `limit`          |
-| GET    | `/drones/:id`                 | Get one drone                                                                          |
-| POST   | `/drones/:id/transitions`     | Move a drone to its next state, e.g. `{ "to": "LOADED" }`                              |
-| POST   | `/drones/:id/load`            | Load medications, e.g. `{ "items": [{ "code": "PARA_500", "quantity": 2 }] }`          |
-| GET    | `/drones/:id/medications`     | Medications on the drone's current delivery                                            |
-| GET    | `/medications`                | Medication catalogue. Filters: `page`, `limit`                                         |
-| GET    | `/drones/:id/battery`         | Battery level and whether it is too low to load                                        |
-| PATCH  | `/drones/:id/battery`         | Set the battery level, e.g. `{ "batteryPct": 40 }`. Stands in for drone telemetry      |
-| GET    | `/drones/:id/battery/history` | Battery audit log, newest first. Filters: `page`, `limit`                              |
-| POST   | `/drones/:id/retire`          | Take a drone out of service and keep its history, e.g. `{ "reason": "Motor failure" }` |
+| Method | Path                          | What it does                                                                                                           |
+| ------ | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/drones`                     | Register a drone. It starts IDLE and empty                                                                             |
+| GET    | `/drones`                     | List drones. Filters: `available`, `state`, `includeRetired`, `page`, `limit`                                          |
+| GET    | `/drones/:id`                 | Get one drone                                                                                                          |
+| POST   | `/drones/:id/transitions`     | Move a drone to its next state, e.g. `{ "to": "LOADED" }`                                                              |
+| POST   | `/drones/:id/load`            | Load medications, e.g. `{ "items": [{ "code": "PARA_500", "quantity": 2 }] }`                                          |
+| GET    | `/drones/:id/medications`     | Medications on the drone's current delivery                                                                            |
+| GET    | `/medications`                | Medication catalogue. Filters: `page`, `limit`                                                                         |
+| POST   | `/medications`                | Add a medication, e.g. `{ "name": "Vitamin_C_500mg", "code": "VITC_500", "weightG": 12.5, "imageUrl": "https://..." }` |
+| GET    | `/drones/:id/battery`         | Battery level and whether it is too low to load                                                                        |
+| PATCH  | `/drones/:id/battery`         | Set the battery level, e.g. `{ "batteryPct": 40 }`. Stands in for drone telemetry                                      |
+| GET    | `/drones/:id/battery/history` | Battery audit log, newest first. Filters: `page`, `limit`                                                              |
+| POST   | `/drones/:id/retire`          | Take a drone out of service and keep its history, e.g. `{ "reason": "Motor failure" }`                                 |
 
 Example:
 
@@ -113,7 +114,7 @@ LOADING -> IDLE (cancel)
 
 Going back to IDLE closes the delivery and empties the drone. Moving to LOADING or LOADED needs enough battery, and LOADED needs something on board.
 
-Error codes: `VALIDATION_ERROR`, `DRONE_NOT_FOUND`, `MEDICATION_NOT_FOUND`, `DUPLICATE_SERIAL`, `FLEET_FULL`, `INVALID_STATE_TRANSITION`, `DRONE_NOT_LOADABLE`, `BATTERY_TOO_LOW`, `DRONE_OVERWEIGHT`, `IDEMPOTENCY_KEY_REUSED`, `DRONE_IN_USE`, `DRONE_RETIRED`, `DRONE_BUSY` (another request is changing the same drone; try again).
+Error codes: `VALIDATION_ERROR`, `DRONE_NOT_FOUND`, `MEDICATION_NOT_FOUND`, `DUPLICATE_SERIAL`, `DUPLICATE_MEDICATION_CODE`, `FLEET_FULL`, `INVALID_STATE_TRANSITION`, `DRONE_NOT_LOADABLE`, `BATTERY_TOO_LOW`, `DRONE_OVERWEIGHT`, `IDEMPOTENCY_KEY_REUSED`, `DRONE_IN_USE`, `DRONE_RETIRED`, `DRONE_BUSY` (another request is changing the same drone; try again).
 
 ## Seed data
 
@@ -142,6 +143,8 @@ The database is loaded with 8 drones and 8 medications on start. The seed only a
 | EPI_03      | Adrenaline_Autoinjector | 120g   |
 
 Medication images are placeholder URLs. Image upload is out of scope.
+
+New medications can be added with `POST /medications`. Adding or changing a medication never changes what is already loaded on a drone, because each loaded item keeps a copy of its weight from the moment it was loaded.
 
 Weights are sent and returned in grams (up to 3 decimal places) and stored as whole milligrams, so sums never pick up floating point errors.
 
