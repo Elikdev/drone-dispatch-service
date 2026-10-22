@@ -12,6 +12,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
+    "db:seed": "npm run build && node dist/database/seed.js",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -52,7 +53,9 @@
     },
     "setupFiles": [
       "<rootDir>/test/setup-env.ts"
-    ]
+    ],
+    "globalSetup": "<rootDir>/test/global-setup.ts",
+    "maxWorkers": 1
   },
   "dependencies": {
     "@nestjs/common": "^11.2.7",
@@ -65,11 +68,9 @@
     "@prisma/client": "^7.10.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
-    "dotenv": "^18.0.8",
     "nestjs-pino": "^4.6.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
-    "prisma": "^7.10.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
@@ -82,12 +83,14 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^24.19.2",
     "@types/supertest": "^7.2.1",
+    "dotenv": "^18.0.8",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.13.0",
     "jest": "^30.5.2",
     "pino-pretty": "^13.2.0",
     "prettier": "^3.9.10",
+    "prisma": "^7.10.1",
     "supertest": "^7.3.1",
     "ts-jest": "^29.4.15",
     "typescript": "~5.9.3",

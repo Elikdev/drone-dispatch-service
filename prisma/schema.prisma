@@ -7,3 +7,71 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum DroneState {
+  IDLE
+  LOADING
+  LOADED
+  DELIVERING
+  DELIVERED
+  RETURNING
+
+  @@map("drone_state")
+}
+
+model Drone {
+  id             String     @id @default(uuid(7)) @db.Uuid
+  serialNumber   String     @unique @map("serial_number") @db.VarChar(100)
+  model          String     @db.VarChar(32)
+  weightLimitMg  Int        @map("weight_limit_mg")
+  loadedWeightMg Int        @default(0) @map("loaded_weight_mg")
+  batteryPct     Int        @map("battery_pct")
+  state          DroneState @default(IDLE)
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  deliveries Delivery[]
+
+  @@map("drones")
+}
+
+model Medication {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String   @db.VarChar(100)
+  code      String   @unique @db.VarChar(100)
+  weightMg  Int      @map("weight_mg")
+  imageUrl  String   @map("image_url")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  deliveryItems DeliveryItem[]
+
+  @@map("medications")
+}
+
+model Delivery {
+  id       String    @id @default(uuid(7)) @db.Uuid
+  droneId  String    @map("drone_id") @db.Uuid
+  openedAt DateTime  @default(now()) @map("opened_at") @db.Timestamptz(3)
+  closedAt DateTime? @map("closed_at") @db.Timestamptz(3)
+
+  drone Drone          @relation(fields: [droneId], references: [id], onDelete: NoAction)
+  items DeliveryItem[]
+
+  @@map("deliveries")
+}
+
+model DeliveryItem {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  deliveryId   String   @map("delivery_id") @db.Uuid
+  medicationId String   @map("medication_id") @db.Uuid
+  quantity     Int
+  unitWeightMg Int      @map("unit_weight_mg")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  delivery   Delivery   @relation(fields: [deliveryId], references: [id], onDelete: NoAction)
+  medication Medication @relation(fields: [medicationId], references: [id], onDelete: NoAction)
+
+  @@index([deliveryId])
+  @@map("delivery_items")
+}
