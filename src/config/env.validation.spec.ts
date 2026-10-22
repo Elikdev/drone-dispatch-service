@@ -15,6 +15,16 @@ describe('validateEnv', () => {
       LOG_LEVEL: 'info',
       RATE_LIMIT_TTL_MS: 60000,
       RATE_LIMIT_MAX: 100,
+      FLEET_CAPACITY: 10,
+      MAX_DRONE_WEIGHT_LIMIT_G: 500,
+      MIN_LOADING_BATTERY_PCT: 25,
+      PAGINATION_DEFAULT_LIMIT: 20,
+      PAGINATION_MAX_LIMIT: 100,
+      DB_LOCK_TIMEOUT_MS: 3000,
+      IDEMPOTENCY_KEY_TTL_HOURS: 24,
+      BATTERY_AUDIT_ENABLED: true,
+      BATTERY_CHECK_INTERVAL_MS: 60000,
+      BATTERY_AUDIT_BATCH_SIZE: 1000,
     });
   });
 
@@ -45,6 +55,36 @@ describe('validateEnv', () => {
 
   it.each(['0', '70000', 'abc'])('fails when PORT is %s', (port) => {
     expect(() => validateEnv({ ...validEnv, PORT: port })).toThrow(/PORT/);
+  });
+
+  it.each([
+    ['MIN_LOADING_BATTERY_PCT', '150'],
+    ['MAX_DRONE_WEIGHT_LIMIT_G', '0'],
+    ['MAX_DRONE_WEIGHT_LIMIT_G', '12.3456'],
+    ['FLEET_CAPACITY', '0'],
+    ['BATTERY_AUDIT_ENABLED', 'yes'],
+    ['BATTERY_CHECK_INTERVAL_MS', '10'],
+  ])('fails when %s is %s', (name, value) => {
+    expect(() => validateEnv({ ...validEnv, [name]: value })).toThrow(
+      new RegExp(name),
+    );
+  });
+
+  it('reads BATTERY_AUDIT_ENABLED=false as false', () => {
+    expect(
+      validateEnv({ ...validEnv, BATTERY_AUDIT_ENABLED: 'false' })
+        .BATTERY_AUDIT_ENABLED,
+    ).toBe(false);
+  });
+
+  it('fails when the default page size is bigger than the max', () => {
+    expect(() =>
+      validateEnv({
+        ...validEnv,
+        PAGINATION_DEFAULT_LIMIT: '50',
+        PAGINATION_MAX_LIMIT: '10',
+      }),
+    ).toThrow(/PAGINATION_DEFAULT_LIMIT/);
   });
 
   it('lists every invalid variable in one error', () => {

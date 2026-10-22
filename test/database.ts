@@ -9,6 +9,6 @@ export function createTestPrisma(): PrismaClient {
 
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE delivery_items, deliveries, medications, drones CASCADE',
+    'TRUNCATE battery_audit_logs, idempotency_keys, delivery_items, deliveries, medications, drones CASCADE',
   );
 }

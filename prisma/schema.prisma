@@ -30,7 +30,8 @@ model Drone {
   createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  deliveries Delivery[]
+  deliveries       Delivery[]
+  batteryAuditLogs BatteryAuditLog[]
 
   @@map("drones")
 }
@@ -74,4 +75,27 @@ model DeliveryItem {
 
   @@index([deliveryId])
   @@map("delivery_items")
+}
+
+model IdempotencyKey {
+  key          String   @id @db.VarChar(255)
+  requestHash  String   @map("request_hash") @db.Char(64)
+  responseBody Json?    @map("response_body")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@map("idempotency_keys")
+}
+
+model BatteryAuditLog {
+  id         BigInt     @id @default(autoincrement())
+  droneId    String     @map("drone_id") @db.Uuid
+  batteryPct Int        @map("battery_pct")
+  droneState DroneState @map("drone_state")
+  isLow      Boolean    @map("is_low")
+  checkedAt  DateTime   @map("checked_at") @db.Timestamptz(3)
+
+  drone Drone @relation(fields: [droneId], references: [id], onDelete: NoAction)
+
+  @@index([droneId, checkedAt(sort: Desc), id(sort: Desc)])
+  @@map("battery_audit_logs")
 }

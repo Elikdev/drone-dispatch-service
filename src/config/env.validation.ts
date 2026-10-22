@@ -1,8 +1,12 @@
-import { plainToInstance, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
+import { toBoolean } from '../common/validation/to-boolean';
 import {
+  IsBoolean,
   IsEnum,
   IsIn,
   IsInt,
+  IsNumber,
+  IsPositive,
   IsString,
   Matches,
   Max,
@@ -60,6 +64,59 @@ export class EnvironmentVariables {
   @IsInt()
   @Min(1)
   RATE_LIMIT_MAX = 100;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  FLEET_CAPACITY = 10;
+
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 3 })
+  @IsPositive()
+  MAX_DRONE_WEIGHT_LIMIT_G = 500;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  MIN_LOADING_BATTERY_PCT = 25;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  PAGINATION_DEFAULT_LIMIT = 20;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  PAGINATION_MAX_LIMIT = 100;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(100)
+  @Max(30000)
+  DB_LOCK_TIMEOUT_MS = 3000;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  IDEMPOTENCY_KEY_TTL_HOURS = 24;
+
+  @Transform(toBoolean)
+  @IsBoolean()
+  BATTERY_AUDIT_ENABLED = true;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  BATTERY_CHECK_INTERVAL_MS = 60000;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10000)
+  BATTERY_AUDIT_BATCH_SIZE = 1000;
 }
 
 export function validateEnv(
@@ -68,13 +125,18 @@ export function validateEnv(
   const env = plainToInstance(EnvironmentVariables, config, {
     exposeDefaultValues: true,
   });
-  const errors = validateSync(env);
+  const lines = validateSync(env).map(
+    (error) =>
+      `- ${error.property}: ${Object.values(error.constraints ?? {}).join(', ')}`,
+  );
 
-  if (errors.length > 0) {
-    const lines = errors.map(
-      (error) =>
-        `- ${error.property}: ${Object.values(error.constraints ?? {}).join(', ')}`,
+  if (env.PAGINATION_DEFAULT_LIMIT > env.PAGINATION_MAX_LIMIT) {
+    lines.push(
+      '- PAGINATION_DEFAULT_LIMIT: must not be greater than PAGINATION_MAX_LIMIT',
     );
+  }
+
+  if (lines.length > 0) {
     throw new Error(`Invalid environment variables:\n${lines.join('\n')}`);
   }
 
