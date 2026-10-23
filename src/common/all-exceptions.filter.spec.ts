@@ -9,8 +9,7 @@ import {
 } from '@nestjs/common';
 import { ThrottlerException } from '@nestjs/throttler';
 import { AllExceptionsFilter } from './all-exceptions.filter';
-import { AppError } from './app-error';
-import { ErrorCode } from './error-codes';
+import { AppError, ErrorCode } from './app-error';
 
 function run(exception: unknown, requestId?: string) {
   const json = jest.fn<void, [Record<string, unknown>]>();
@@ -69,11 +68,11 @@ describe('AllExceptionsFilter', () => {
     [
       new BadRequestException('Unexpected end of JSON input'),
       400,
-      'BAD_REQUEST',
+      'VALIDATION_ERROR',
     ],
     [new NotFoundException('Cannot GET /nope'), 404, 'NOT_FOUND'],
     [new ThrottlerException(), 429, 'RATE_LIMITED'],
-    [new MethodNotAllowedException(), 405, 'REQUEST_ERROR'],
+    [new MethodNotAllowedException(), 405, 'VALIDATION_ERROR'],
     [new InternalServerErrorException(), 500, 'INTERNAL_ERROR'],
   ])('maps %p to %i %s', (exception, status, code) => {
     const result = run(exception);
@@ -82,11 +81,11 @@ describe('AllExceptionsFilter', () => {
     expect(result.body).toMatchObject({ success: false, error: { code } });
   });
 
-  it('maps a body that is too large to PAYLOAD_TOO_LARGE', () => {
+  it('maps a body that is too large to a 413 validation error', () => {
     const result = run({ type: 'entity.too.large', status: 413 });
 
     expect(result.status).toBe(413);
-    expect(result.body).toMatchObject({ error: { code: 'PAYLOAD_TOO_LARGE' } });
+    expect(result.body).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
   });
 
   it('hides the details of an unexpected error', () => {

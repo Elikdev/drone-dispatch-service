@@ -7,10 +7,10 @@ import {
   Matches,
   MaxLength,
 } from 'class-validator';
-import {
-  MEDICATION_CODE_PATTERN,
-  MEDICATION_NAME_PATTERN,
-} from '../domain/medication.rules';
+
+export const MEDICATION_NAME_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+export const MEDICATION_CODE_PATTERN = /^[A-Z0-9_]+$/;
 
 export class CreateMedicationDto {
   @IsString()

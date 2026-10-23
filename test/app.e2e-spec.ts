@@ -3,7 +3,7 @@ import { getOptionsToken } from '@nestjs/throttler';
 import { IsInt, IsString, Min } from 'class-validator';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { Public } from '../src/common/decorators/public.decorator';
+import { Public } from '../src/common/api-key.guard';
 import { createTestApp, TEST_API_KEY as API_KEY } from './create-test-app';
 
 const RATE_LIMIT = 5;
@@ -126,7 +126,7 @@ describe('App (e2e)', () => {
 
     expect(res.body).toMatchObject({
       error: {
-        code: 'BAD_REQUEST',
+        code: 'VALIDATION_ERROR',
         message: expect.stringContaining('JSON') as unknown,
       },
     });
@@ -139,7 +139,7 @@ describe('App (e2e)', () => {
       .send({ name: 'x'.repeat(110_000), quantity: 1 })
       .expect(413);
 
-    expect(res.body).toMatchObject({ error: { code: 'PAYLOAD_TOO_LARGE' } });
+    expect(res.body).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
   });
 
   it('sends back the request id and puts it in errors', async () => {

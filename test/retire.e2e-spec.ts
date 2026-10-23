@@ -70,7 +70,7 @@ describe('Retire a drone (e2e)', () => {
       const res = await retire().expect(409);
 
       expect(res.body.error).toMatchObject({
-        code: 'DRONE_IN_USE',
+        code: 'CONFLICT',
         details: { state },
       });
     },
@@ -96,7 +96,7 @@ describe('Retire a drone (e2e)', () => {
     ] as const)('cannot %s', async (_action, method, path, body) => {
       const res = await call(method, `/drones/${id}/${path}`, body).expect(409);
 
-      expect(res.body.error.code).toBe('DRONE_RETIRED');
+      expect(res.body.error.code).toBe('CONFLICT');
     });
 
     it('is hidden from the list and from available drones', async () => {
@@ -144,7 +144,7 @@ describe('Retire a drone (e2e)', () => {
       }
       const res = await register('DRN-NEW-004').expect(409);
 
-      expect(res.body.error.code).toBe('FLEET_FULL');
+      expect(res.body.error.code).toBe('CONFLICT');
       await expect(prisma.drone.count()).resolves.toBe(11);
     });
 
@@ -156,7 +156,7 @@ describe('Retire a drone (e2e)', () => {
         batteryPct: 90,
       }).expect(409);
 
-      expect(res.body.error.code).toBe('DUPLICATE_SERIAL');
+      expect(res.body.error.code).toBe('CONFLICT');
     });
 
     it('is skipped by the battery audit', async () => {

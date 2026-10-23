@@ -1,17 +1,20 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
 import {
   CanActivate,
   ExecutionContext,
   HttpStatus,
   Injectable,
+  SetMetadata,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { EnvironmentVariables } from '../../config/env.validation';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-import { AppError } from '../errors/app-error';
-import { ErrorCode } from '../errors/error-codes';
+import { createHash, timingSafeEqual } from 'node:crypto';
+import { EnvironmentVariables } from '../config/env.validation';
+import { AppError, ErrorCode } from './app-error';
+
+export const IS_PUBLIC_KEY = 'isPublic';
+
+export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
 
 export const API_KEY_HEADER = 'x-api-key';
 

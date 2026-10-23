@@ -1,4 +1,4 @@
-import { resolvePage } from './paginate';
+import { resolvePage } from './pagination';
 
 const limits = { defaultLimit: 20, maxLimit: 100 };
 

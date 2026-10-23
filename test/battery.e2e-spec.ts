@@ -75,7 +75,7 @@ describe('Battery (e2e)', () => {
     it('returns 404 for an unknown drone', async () => {
       const res = await api('get', `${UNKNOWN_ID}/battery`).expect(404);
 
-      expect(res.body.error.code).toBe('DRONE_NOT_FOUND');
+      expect(res.body.error.code).toBe('NOT_FOUND');
     });
   });
 

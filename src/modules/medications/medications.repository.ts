@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PageRequest } from '../../common/pagination/paginate';
+import { PageRequest } from '../../common/pagination';
 import { PrismaService } from '../../database/prisma.service';
 import { Medication, Prisma } from '../../generated/prisma/client';
 

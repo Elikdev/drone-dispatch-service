@@ -6,8 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EnvironmentVariables } from '../../config/env.validation';
-import { Db } from '../../database/database.types';
-import { PrismaService } from '../../database/prisma.service';
+import { Db, PrismaService } from '../../database/prisma.service';
 
 const RUN_TIMEOUT_MS = 60_000;
 const CONNECTION_WAIT_MS = 10_000;

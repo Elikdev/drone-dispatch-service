@@ -1,14 +1,16 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AppError } from '../../common/errors/app-error';
-import { ErrorCode } from '../../common/errors/error-codes';
-import { Pagination, resolvePage } from '../../common/pagination/paginate';
-import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
-import { gramsToMg } from '../../common/units/weight';
+import { AppError, ErrorCode } from '../../common/app-error';
+import {
+  Pagination,
+  PaginationQueryDto,
+  resolvePage,
+} from '../../common/pagination';
+import { gramsToMg } from '../../common/weight';
 import { EnvironmentVariables } from '../../config/env.validation';
-import { isUniqueViolation } from '../../database/prisma-errors';
+import { isUniqueViolation } from '../../database/prisma.service';
 import { Medication } from '../../generated/prisma/client';
-import { CreateMedicationDto } from './dto/create-medication.dto';
+import { CreateMedicationDto } from './medications.dto';
 import { MedicationsRepository } from './medications.repository';
 
 @Injectable()
@@ -64,7 +66,7 @@ export class MedicationsService {
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new AppError(
-          ErrorCode.DUPLICATE_MEDICATION_CODE,
+          ErrorCode.CONFLICT,
           `A medication with code ${dto.code} already exists`,
           HttpStatus.CONFLICT,
         );

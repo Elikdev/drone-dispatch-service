@@ -3,13 +3,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
-import { ApiKeyGuard } from './common/guards/api-key.guard';
+import { ApiKeyGuard } from './common/api-key.guard';
 import { EnvironmentVariables, validateEnv } from './config/env.validation';
 import { buildLoggerOptions } from './config/logger.config';
 import { PrismaModule } from './database/prisma.module';
 import { BatteryModule } from './modules/battery/battery.module';
 import { DronesModule } from './modules/drones/drones.module';
-import { HealthModule } from './modules/health/health.module';
+import { HealthController } from './modules/health/health.controller';
 import { MedicationsModule } from './modules/medications/medications.module';
 
 @Module({
@@ -33,11 +33,11 @@ import { MedicationsModule } from './modules/medications/medications.module';
       ],
     }),
     PrismaModule,
-    HealthModule,
     DronesModule,
     MedicationsModule,
     BatteryModule,
   ],
+  controllers: [HealthController],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: ApiKeyGuard },

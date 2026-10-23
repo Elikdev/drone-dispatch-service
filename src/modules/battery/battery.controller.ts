@@ -8,11 +8,10 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Pagination } from '../../common/pagination/paginate';
-import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { Pagination, PaginationQueryDto } from '../../common/pagination';
 import { BatteryLogResponse, BatteryResponse } from './battery.mapper';
 import { BatteryService } from './battery.service';
-import { UpdateBatteryDto } from './dto/update-battery.dto';
+import { UpdateBatteryDto } from './battery.dto';
 
 @ApiTags('battery')
 @Controller('drones/:id/battery')

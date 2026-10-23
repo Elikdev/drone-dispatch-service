@@ -1,18 +1,18 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AppError } from '../../common/errors/app-error';
-import { ErrorCode } from '../../common/errors/error-codes';
-import { Pagination, resolvePage } from '../../common/pagination/paginate';
-import { gramsToMg } from '../../common/units/weight';
+import { AppError, ErrorCode } from '../../common/app-error';
+import { Pagination, resolvePage } from '../../common/pagination';
+import { gramsToMg } from '../../common/weight';
 import { EnvironmentVariables } from '../../config/env.validation';
-import { Db } from '../../database/database.types';
-import { isUniqueViolation } from '../../database/prisma-errors';
-import { PrismaService } from '../../database/prisma.service';
+import {
+  Db,
+  isUniqueViolation,
+  PrismaService,
+} from '../../database/prisma.service';
 import { Drone, DroneState } from '../../generated/prisma/client';
-import { assertCanTransition, assertInService } from './domain/drone-state';
+import { assertCanTransition, assertInService } from './drones.rules';
 import { DronesRepository } from './drones.repository';
-import { ListDronesQueryDto } from './dto/list-drones-query.dto';
-import { RegisterDroneDto } from './dto/register-drone.dto';
+import { ListDronesQueryDto, RegisterDroneDto } from './drones.dto';
 
 @Injectable()
 export class DronesService {
@@ -49,7 +49,7 @@ export class DronesService {
         await this.drones.lockFleet(tx);
         if ((await this.drones.countInService(tx)) >= capacity) {
           throw new AppError(
-            ErrorCode.FLEET_FULL,
+            ErrorCode.CONFLICT,
             `The fleet already has ${capacity} drones`,
             HttpStatus.CONFLICT,
           );
@@ -64,7 +64,7 @@ export class DronesService {
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new AppError(
-          ErrorCode.DUPLICATE_SERIAL,
+          ErrorCode.CONFLICT,
           `A drone with serial number ${dto.serialNumber} already exists`,
           HttpStatus.CONFLICT,
         );
@@ -134,7 +134,7 @@ export class DronesService {
       }
       if (drone.state !== DroneState.IDLE) {
         throw new AppError(
-          ErrorCode.DRONE_IN_USE,
+          ErrorCode.CONFLICT,
           `A drone in state ${drone.state} cannot be retired, unload it or finish the delivery first`,
           HttpStatus.CONFLICT,
           { state: drone.state },

@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Pagination, resolvePage } from '../../common/pagination/paginate';
-import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import {
+  Pagination,
+  PaginationQueryDto,
+  resolvePage,
+} from '../../common/pagination';
 import { EnvironmentVariables } from '../../config/env.validation';
 import { PrismaService } from '../../database/prisma.service';
-import { assertInService } from '../drones/domain/drone-state';
+import { assertInService } from '../drones/drones.rules';
 import { DronesRepository } from '../drones/drones.repository';
 import {
   BatteryLogResponse,
